@@ -277,9 +277,11 @@ class Neuron:
                 self.weights[i] -= alpha * loss_gradient * activation_gradient * x[i]
 
     def fit(self, xs, ys, *, epochs=0):
+
         prev_weights = self.weights
         prev_bias = self.bias
         epoch = 0
+
         while True:
             self.partial_fit(xs, ys)
             if prev_weights == self.weights and prev_bias == self.bias:
