@@ -1,5 +1,8 @@
 import math
-import numpy as np
+import pandas as pd
+import tensorflow as tf
+from collections import Counter
+from copy import deepcopy
 
 
 def linear(x):
@@ -296,3 +299,89 @@ class Neuron:
     def __repr__(self):
         text = f'Neuron(dim={self.dim}, activation={self.activation.__name__}, loss={self.loss.__name__})'
         return text
+
+
+class Layer:
+    layercounter = Counter()
+
+    def __init__(self, outputs, *, name=None, next=None):
+        Layer.layercounter[type(self)] += 1
+        if name is None:
+            name = f'{type(self).__name__}_{Layer.layercounter[type(self)]}'
+        self.inputs = 0
+        self.outputs = outputs
+        self.name = name
+        self.next = next
+
+    def __repr__(self):
+        text = f'Layer(inputs={self.inputs}, outputs={self.outputs}, name={repr(self.name)})'
+        if self.next is not None:
+            text += ' + ' + repr(self.next)
+        return text
+
+    def add(self, next):
+        if self.next is None:
+            self.next = next
+            next.set_inputs(self.outputs)
+        else:
+            self.next.add(next)
+
+    def set_inputs(self, inputs):
+        self.inputs = inputs
+
+    def __add__(self, next):
+        result = deepcopy(self)
+        result.add(deepcopy(next))
+        return result
+
+    def __getitem__(self, index):
+        if index == 0 or index == self.name:
+            return self
+        if isinstance(index, int):
+            if self.next is None:
+                raise IndexError('Layer index out of range')
+            return self.next[index - 1]
+        if isinstance(index, str):
+            if self.next is None:
+                raise KeyError(index)
+            return self.next[index]
+        raise TypeError(f'Layer indices must be integers or strings, not {type(index).__name__}')
+
+    def __iadd__(self, next):
+        self.__add__(next)
+        return self
+
+    def __len__(self):
+        return len(self)
+
+    def __iter__(self):
+        return iter(self)
+
+
+class InputLayer(Layer):
+
+    def __repr__(self):
+        text = f'InputLayer(outputs={self.outputs}, name={repr(self.name)})'
+        if self.next is not None:
+            text += ' + ' + repr(self.next)
+        return text
+
+
+class DenseLayer(Layer):
+
+    def __init__(self, outputs, *, name=None, next=None):
+        super().__init__()
+        self.name = name
+        self.output = outputs
+        self.next = next
+
+
+
+
+    def set_inputs(self, inputs):
+        if self.weights is None:
+            # Initialize weights using Xavier initialization
+            limit = math.sqrt(6 / (inputs + 1))
+            self.weights = [random.uniform(-limit, limit) for _ in range(inputs)]
+        else:
+            raise ValueError("Inputs already set.")

@@ -276,7 +276,7 @@ class Neuron:
             for i in range(len(x)):
                 self.weights[i] -= alpha * loss_gradient * activation_gradient * x[i]
 
-    def fit(self, xs, ys, *, epochs=0):
+    def fit(self, xs, ys, *, epochs=100):
 
         prev_weights = self.weights
         prev_bias = self.bias
