@@ -4,6 +4,7 @@ from collections import Counter
 from copy import deepcopy
 
 
+# activation functions
 def linear(x):
     """
     Linear activation function
@@ -37,12 +38,13 @@ def tanh(x):
     :param x:
     :return:
     """
-    return (math.e ** x - math.e ** - x) / (math.e ** x + math.e ** - x)
+    return math.tanh(x)
 
 
+# error/ loss functions
 def hinge(y_true, y_phred):
     """
-    Hinge activation function
+    Hinge error function
     r
     :param y_true:
     :param y_phred:
@@ -71,6 +73,8 @@ def mean_absolute_error(y_true, y_pred):
     return abs(y_pred - y_true)
 
 
+# derivative wrapper
+
 def derivative(function, delta=0.001):
     """
     Calculates the derivative of a function for the given value.
@@ -82,11 +86,15 @@ def derivative(function, delta=0.001):
 
     def wrapper_derivative(x, *args):
         return (function(x + delta, *args) - function(x - delta, *args)) / (2 * delta)
+
     # Give it a distinct name
     wrapper_derivative.__name__ = function.__name__ + '’'
     wrapper_derivative.__qualname__ = function.__qualname__ + '’'
     # Return the wrapper function
     return wrapper_derivative
+
+
+# perceptron, linearregression and neuron classes
 
 
 class Perceptron:
@@ -144,7 +152,7 @@ class Perceptron:
         for x, y in zip(xs, ys):
             prediction = self.predict_instance(x)
             error = y - prediction
-            self.bias +=  - error
+            self.bias += - error
             for i in range(len(x)):
                 self.weights[i] += - error * x[i]
 
@@ -267,27 +275,34 @@ class Neuron:
 
     def partial_fit(self, xs, ys, alpha=0.01):
         for x, y in zip(xs, ys):
+            # calculate the prediction
             prediction = self.bias + sum(w * xi for w, xi in zip(self.weights, x))
 
+            # calculate the  derivatives
             loss_gradient = derivative(self.loss)(prediction, y)
             activation_gradient = derivative(self.activation)(prediction)
+            update_factor = alpha * loss_gradient * activation_gradient
 
-            self.bias -= alpha * loss_gradient * activation_gradient
-            self.weights = [w - alpha * loss_gradient * activation_gradient * xi for w, xi in zip(self.weights, x)]
+            # Updating the bias
+            self.bias -= update_factor
 
-    def fit(self, xs, ys, epochs=0,alpha=0.001):
+            # Updating weights
+            self.weights = [w - update_factor * xi for w, xi in zip(self.weights, x)]
+
+    def fit(self, xs, ys, epochs=0, alpha=0.001):
         prev_weights = self.weights.copy()
         prev_bias = self.bias
         epoch = 0
-
         while True:
             self.partial_fit(xs, ys, alpha=alpha)
             if prev_weights == self.weights and prev_bias == self.bias:
+                print(f"Converged after {epoch} epochs.")
                 break
             prev_weights = self.weights.copy()
             prev_bias = self.bias
             epoch += 1
             if epochs != 0 and epoch >= epochs:
+                print(f"Stopped after reaching the max epochs: {epochs}.")
                 break
 
     def __repr__(self):
@@ -387,7 +402,7 @@ class DenseLayer(Layer):
         self.inputs = inputs
 
         if self.weights is None:
-            # Initialize weights using Xavier initialization for each neuron in the layer
+            # initialize weights using Xavier initialization for each neuron in the layer
             limit = math.sqrt(6 / (inputs + self.outputs))
             self.weights = [[random.uniform(-limit, limit) for _ in range(inputs)] for _ in range(self.outputs)]
         else:
@@ -401,27 +416,34 @@ class DenseLayer(Layer):
         :param alpha:
         :return:
         """
-        aa = []  # Output values for all instances xs
+        activated_outputs = []  # Output values for all instances xs
 
+        # forward propagation
         for x in xs:
-            a = [self.bias[o] + sum(wi * xi for wi, xi in zip(self.weights[o], x))
-                 for o in range(self.outputs)]  # Output value for one instance x
-            aa.append(a)
-            # Calculate output value for each neuron o with the input values x
-        yhats, loss, gradients = self.next(aa, ys, alpha=alpha)
-        if not alpha:
-            return yhats, loss, None
+            instance_output = [self.bias[o] + sum(wi * xi for wi, xi in zip(self.weights[o], x))
+                               for o in range(self.outputs)]  # Output value for one instance x
+            activated_outputs.append(instance_output)
 
-        gradient_x_list = []
-        # updating biases and weights for instance x
-        for x, gradient_x in zip(xs, gradients):
-            gx = [sum(self.weights[o][i] * gradient_x[o] for o in range(self.outputs)) for i in range(self.inputs)]
-            gradient_x_list.append(gx)
-            for o in range(self.outputs):
-                self.bias[o] -= alpha / len(xs) * gradient_x[o]
-                self.weights[o] = [self.weights[o][i] - alpha/len(xs) * gradient_x[o] * x[i] for i in range(self.inputs)]
+        # check if training or not
+        if ys is not None and alpha is not None:
+            yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
+            gradient_x_list = []
 
-        return yhats, loss, gradient_x_list
+            # backwards propogation updating  biases and weights
+            for x, gradient_x in zip(xs, gradients):
+                instance_gradient = [sum(self.weights[o][i] * gradient_x[o] for o in range(self.outputs)) for i in
+                                     range(self.inputs)]
+                gradient_x_list.append(instance_gradient)
+
+                for o in range(self.outputs):
+                    self.bias[o] -= alpha * gradient_x[o] / len(xs)
+                    for i in range(self.inputs):
+                        self.weights[o][i] -= alpha * gradient_x[o] * x[i] / len(xs)
+
+            return yhats, loss, gradient_x_list
+        else:
+            # not training, return the forward pass results
+            return activated_outputs, None, None
 
 
 class ActivationLayer(Layer):
@@ -439,29 +461,27 @@ class ActivationLayer(Layer):
         return text
 
     def __call__(self, xs, ys=None, alpha=None):
-        # Prepare the list for the activated output values
-        hh = []
+
+        activated_outputs = []
         for x in xs:
-            # Compute the activated output for each input x
-            h = [self.activation(x[o]) for o in range(self.outputs)]
-            hh.append(h)
+            # calculate the activated output for each input x
+            activated_output = [self.activation(x[o]) for o in range(self.outputs)]
+            activated_outputs.append(activated_output)
 
-        # Perform the feedforward operation and receive the next layer's results and back-propagation values
-        yhats, loss, gradients = self.next(hh, ys, alpha=alpha)
+        # if training check do backwards propogation
+        if ys is not None and alpha is not None:
+            yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
 
-        if not alpha:
-            # If alpha is not specified, we're not in training mode, so return only the predictions and loss
-            return yhats, loss, None
+            # calculate the gradients from the loss to the pre-activation value
+            gradients_to_pre_activations = []
+            for x, gradient in zip(xs, gradients):
+                gradient_to_pre_activation = [self.activation_derivative(x[o]) * gradient[o] for o in
+                                              range(self.outputs)]
+                gradients_to_pre_activations.append(gradient_to_pre_activation)
 
-        # Calculate the gradients from the loss to the pre-activation value
-        gradients_to_pre_activations = []
-        for x, gradient in zip(xs, gradients):
-            # For each input x and its corresponding gradient, calculate the gradient from the loss to the
-            # pre-activation value
-            gradient_to_pre_activation = [self.activation_derivative(x[o]) * gradient[o] for o in range(self.outputs)]
-            gradients_to_pre_activations.append(gradient_to_pre_activation)
-
-        return yhats, loss, gradients_to_pre_activations
+            return yhats, loss, gradients_to_pre_activations
+        else:
+            return activated_outputs, None, None
 
 
 class LossLayer(Layer):
@@ -477,28 +497,22 @@ class LossLayer(Layer):
         raise NotImplementedError("It is not possible to add a layer to a LossLayer,"
                                   "since a network should always end with a single LossLayer")
 
-    def __call__(self, hh, ys=None, alpha=None):
-        # yhats is the output of the previous layer, because the loss layer is always last
-        yhats = hh
-        # losses, the loss, which will be a list of losses for all outputs in yhats, starts at None
-        losses = None
-        # gradient_vector_list, will be list of gradient vectors, one for each instance, with one value for each output of the prev layer
-        # starts None
-        gradient_vector_list = None
-        if ys:
-            losses = []
-            # For all instances calculate loss:
-            for yhat, y in zip(yhats, ys):
-                # Take sum of the loss of all outputs(number of outputs previous layer=inputs this layer)
-                ln = sum(self.loss(yhat[o], y[o]) for o in range(self.inputs))
-                losses.append(ln)
+    def __call__(self, predictions, ys=None, alpha=None):
 
-            # If there is a learning rate
+        yhats = predictions
+        losses = None
+        gradient_vector_list = None
+
+        # calculate loss if targets are provided
+        if ys:
+            losses = [self.loss(yhat, y) for yhat, y in zip(yhats, ys)]
+
+            # calculate gradients for training
             if alpha:
-                gradient_vector_list = []
-                # Calculate a gradient vectors for all instances in yhats
-                for yhat, y in zip(yhats, ys):
-                    # Each instance can have multiple outputs, with the derivative of the loss we calculate dl/dyhat
-                    gln = [derivative(self.loss)(yhat[o], y[o]) for o in range(self.inputs)]
-                    gradient_vector_list.append(gln)
+                gradient_vector_list = [
+                    [derivative(self.loss)(yhat_i, y_i) for yhat_i, y_i in zip(yhat, y)]
+                    for yhat, y in zip(yhats, ys)
+                ]
+
+        # outputs for further use
         return yhats, losses, gradient_vector_list
