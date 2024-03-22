@@ -38,7 +38,7 @@ def tanh(x):
     :param x:
     :return:
     """
-    return math.tanh(x)
+    return (math.e ** x - math.e ** - x) / (math.e ** x + math.e ** - x)
 
 
 # error/ loss functions
@@ -425,8 +425,9 @@ class DenseLayer(Layer):
             activated_outputs.append(instance_output)
 
         # check if training or not
+        yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
         if ys is not None and alpha is not None:
-            yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
+
             gradient_x_list = []
 
             # backwards propogation updating  biases and weights
@@ -443,7 +444,7 @@ class DenseLayer(Layer):
             return yhats, loss, gradient_x_list
         else:
             # not training, return the forward pass results
-            return activated_outputs, None, None
+            return yhats, loss, None
 
 
 class ActivationLayer(Layer):
@@ -468,9 +469,10 @@ class ActivationLayer(Layer):
             activated_output = [self.activation(x[o]) for o in range(self.outputs)]
             activated_outputs.append(activated_output)
 
+        yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
         # if training check do backwards propogation
         if ys is not None and alpha is not None:
-            yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
+
 
             # calculate the gradients from the loss to the pre-activation value
             gradients_to_pre_activations = []
@@ -481,7 +483,7 @@ class ActivationLayer(Layer):
 
             return yhats, loss, gradients_to_pre_activations
         else:
-            return activated_outputs, None, None
+            return yhats, loss, None
 
 
 class LossLayer(Layer):
@@ -505,8 +507,11 @@ class LossLayer(Layer):
 
         # calculate loss if targets are provided
         if ys:
-            losses = [self.loss(yhat, y) for yhat, y in zip(yhats, ys)]
-
+            losses = []
+            for yhat, y in zip(yhats, ys):
+                # Take sum of the loss of all outputs(number of outputs previous layer=inputs this layer)
+                loss = sum(self.loss(yhat[o], y[o]) for o in range(self.inputs))
+                losses.append(loss)
             # calculate gradients for training
             if alpha:
                 gradient_vector_list = [
