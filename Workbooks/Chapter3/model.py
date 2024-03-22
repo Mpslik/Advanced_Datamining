@@ -1,6 +1,5 @@
 import math
-import pandas as pd
-import tensorflow as tf
+import random
 from collections import Counter
 from copy import deepcopy
 
@@ -23,7 +22,12 @@ def sign(x):
     :param x:
     :return: 1 for positive, -1 for negative numbers of X
     """
-    return 1 if x > 0 else -1
+    if x > 0:
+        return 1
+    if x < 0:
+        return -1
+    else:
+        return 0
 
 
 def tanh(x):
@@ -33,7 +37,7 @@ def tanh(x):
     :param x:
     :return:
     """
-    return math.tanh(x)
+    return (math.e ** x - math.e ** - x) / (math.e ** x + math.e ** - x)
 
 
 def hinge(y_true, y_phred):
@@ -67,7 +71,7 @@ def mean_absolute_error(y_true, y_pred):
     return abs(y_pred - y_true)
 
 
-def derivative(function, delta=0.01):
+def derivative(function, delta=0.001):
     """
     Calculates the derivative of a function for the given value.
     used for calculation of the slope at a given point.
@@ -78,9 +82,10 @@ def derivative(function, delta=0.01):
 
     def wrapper_derivative(x, *args):
         return (function(x + delta, *args) - function(x - delta, *args)) / (2 * delta)
-
-    wrapper_derivative.__name__ = function.__name__ + "'"
-    wrapper_derivative.__qualname__ = function.__qualname__ + "'"
+    # Give it a distinct name
+    wrapper_derivative.__name__ = function.__name__ + '’'
+    wrapper_derivative.__qualname__ = function.__qualname__ + '’'
+    # Return the wrapper function
     return wrapper_derivative
 
 
@@ -90,13 +95,12 @@ class Perceptron:
     used for solving binary linear separable data
     """
 
-    def __init__(self, dim, bias=0, weights=None, learning_rate=0.01):
+    def __init__(self, dim, bias=0, weights=None):
         """
 
         """
         self.dim = dim
         self.bias = bias
-        self.learning_rate = learning_rate
         if weights is None:
             # bij geen opgegeven weights gelijk stellen aan 0 en de opgegeven dimensie
             self.weights = [0] * dim
@@ -133,16 +137,16 @@ class Perceptron:
         """
         Runs a partial fit of the model on the data
         1 single run
-        :param self:
         :param xs: List of instances (data)
         :param ys: List of target / values
         :return:
         """
         for x, y in zip(xs, ys):
             prediction = self.predict_instance(x)
-            self.bias -= (prediction - y)
+            error = y - prediction
+            self.bias +=  - error
             for i in range(len(x)):
-                self.weights[i] -= (prediction - y) * x[i]
+                self.weights[i] += - error * x[i]
 
     def fit(self, xs, ys, *, epochs=0):
         """
@@ -178,10 +182,10 @@ class LinearRegression:
     linear regression model same as perceptron class but with a different activation.
     """
 
-    def __init__(self, dim, bias=0, weights=None, learning_rate=0.01):
+    def __init__(self, dim, bias=0, weights=None):
         self.dim = dim
         self.bias = bias
-        self.learning_rate = learning_rate
+
         if weights is None:
             # bij geen opgegeven weights gelijk stellen aan 0 en de opgegeven dimensie
             self.weights = [0] * dim
@@ -216,18 +220,18 @@ class LinearRegression:
 
     def partial_fit(self, xs, ys):
         """
-                Runs a partial fit of the model on the data
-                1 single run
-                :param self:
-                :param xs: List of instances (data)
-                :param ys: List of target / values
-                :return:
-                """
+        Runs a partial fit of the model on the data
+        1 single run
+        :param xs: List of instances (data)
+        :param ys: List of target / values
+        :return:
+        """
         for x, y in zip(xs, ys):
             prediction = self.predict_instance(x)
-            self.bias -= self.learning_rate * (prediction - y)
+            error = y - prediction
+            self.bias += self.learning_rate * error
             for i in range(len(x)):
-                self.weights[i] -= self.learning_rate * (prediction - y) * x[i]
+                self.weights[i] += self.learning_rate * error * x[i]
 
     def fit(self, xs, ys, *, epochs=0):
         prev_weights = self.weights
@@ -258,47 +262,36 @@ class Neuron:
         self.loss = loss
 
     def predict(self, xs):
-        predictions = []
-        for instance in xs:
-            prediction = self.bias
-            for i in range(len(instance)):
-                prediction += self.weights[i] * instance[i]
-            predictions.append(self.activation(prediction))
-        return predictions
 
-    def partial_fit(self, xs, ys, alpha=0.001):
+        return [self.activation(self.bias + sum(w * x for w, x in zip(self.weights, instance))) for instance in xs]
+
+    def partial_fit(self, xs, ys, alpha=0.01):
         for x, y in zip(xs, ys):
-            prediction = self.bias
-            for i in range(len(x)):
-                prediction += self.weights[i] * x[i]
+            prediction = self.bias + sum(w * xi for w, xi in zip(self.weights, x))
 
             loss_gradient = derivative(self.loss)(prediction, y)
             activation_gradient = derivative(self.activation)(prediction)
 
             self.bias -= alpha * loss_gradient * activation_gradient
-            for i in range(len(x)):
-                self.weights[i] -= alpha * loss_gradient * activation_gradient * x[i]
+            self.weights = [w - alpha * loss_gradient * activation_gradient * xi for w, xi in zip(self.weights, x)]
 
-    def fit(self, xs, ys, *, epochs=0):
-
-        prev_weights = self.weights
+    def fit(self, xs, ys, epochs=0,alpha=0.001):
+        prev_weights = self.weights.copy()
         prev_bias = self.bias
         epoch = 0
 
         while True:
-            self.partial_fit(xs, ys)
+            self.partial_fit(xs, ys, alpha=alpha)
             if prev_weights == self.weights and prev_bias == self.bias:
-                break  # geen veranderingen in de weights en bias dus stoppen
-            # updaten van weight en bias
+                break
             prev_weights = self.weights.copy()
             prev_bias = self.bias
             epoch += 1
             if epochs != 0 and epoch >= epochs:
-                break  # Stop als het opgeven max. aantal epochs behaald is
+                break
 
     def __repr__(self):
-        text = f'Neuron(dim={self.dim}, activation={self.activation.__name__}, loss={self.loss.__name__})'
-        return text
+        return f'Neuron(dim={self.dim}, activation={self.activation.__name__}, loss={self.loss.__name__})'
 
 
 class Layer:
@@ -329,6 +322,9 @@ class Layer:
     def set_inputs(self, inputs):
         self.inputs = inputs
 
+    def __call__(self, xs):
+        raise NotImplementedError('Abstract __call__ method')
+
     def __add__(self, next):
         result = deepcopy(self)
         result.add(deepcopy(next))
@@ -347,18 +343,31 @@ class Layer:
             return self.next[index]
         raise TypeError(f'Layer indices must be integers or strings, not {type(index).__name__}')
 
-    def __iadd__(self, next):
-        self.__add__(next)
-        return self
-
-    def __len__(self):
-        return len(self)
-
-    def __iter__(self):
-        return iter(self)
-
 
 class InputLayer(Layer):
+
+    def __call__(self, xs, ys=None, alpha=None):
+        return self.next(xs, ys=ys, alpha=alpha)
+
+    def set_inputs(self, inputs):
+        raise NotImplementedError("An InputLayer itself can not receive inputs from previous layers,"
+                                  "as it is always the first layer of a network.")
+
+    def predict(self, xs):
+        yhats, _, _ = self(xs)
+        return yhats
+
+    def evaluate(self, xs, ys):
+        _, ls, _ = self(xs, ys)
+        loss_mean = sum(ls) / len(ls)
+        return loss_mean
+
+    def partial_fit(self, xs, ys, alpha=0.001):
+        self(xs, ys, alpha)
+
+    def fit(self, xs, ys, epochs=800, alpha=0.001):
+        for _ in range(epochs):
+            self.partial_fit(xs, ys, alpha=alpha)
 
     def __repr__(self):
         text = f'InputLayer(outputs={self.outputs}, name={repr(self.name)})'
@@ -370,18 +379,126 @@ class InputLayer(Layer):
 class DenseLayer(Layer):
 
     def __init__(self, outputs, *, name=None, next=None):
-        super().__init__()
-        self.name = name
-        self.output = outputs
-        self.next = next
-
-
-
+        super().__init__(outputs, name=name, next=next)
+        self.bias = [0.0 for _ in range(self.outputs)]
+        self.weights = None
 
     def set_inputs(self, inputs):
+        self.inputs = inputs
+
         if self.weights is None:
-            # Initialize weights using Xavier initialization
-            limit = math.sqrt(6 / (inputs + 1))
-            self.weights = [random.uniform(-limit, limit) for _ in range(inputs)]
+            # Initialize weights using Xavier initialization for each neuron in the layer
+            limit = math.sqrt(6 / (inputs + self.outputs))
+            self.weights = [[random.uniform(-limit, limit) for _ in range(inputs)] for _ in range(self.outputs)]
         else:
             raise ValueError("Inputs already set.")
+
+    def __call__(self, xs, ys=None, alpha=None):
+        """
+
+        :param xs:
+        :param ys:
+        :param alpha:
+        :return:
+        """
+        aa = []  # Output values for all instances xs
+
+        for x in xs:
+            a = [self.bias[o] + sum(wi * xi for wi, xi in zip(self.weights[o], x))
+                 for o in range(self.outputs)]  # Output value for one instance x
+            aa.append(a)
+            # Calculate output value for each neuron o with the input values x
+        yhats, loss, gradients = self.next(aa, ys, alpha=alpha)
+        if not alpha:
+            return yhats, loss, None
+
+        gradient_x_list = []
+        # updating biases and weights for instance x
+        for x, gradient_x in zip(xs, gradients):
+            gx = [sum(self.weights[o][i] * gradient_x[o] for o in range(self.outputs)) for i in range(self.inputs)]
+            gradient_x_list.append(gx)
+            for o in range(self.outputs):
+                self.bias[o] -= alpha / len(xs) * gradient_x[o]
+                self.weights[o] = [self.weights[o][i] - alpha/len(xs) * gradient_x[o] * x[i] for i in range(self.inputs)]
+
+        return yhats, loss, gradient_x_list
+
+
+class ActivationLayer(Layer):
+
+    def __init__(self, outputs, *, name=None, next=None, activation=linear):
+        super().__init__(outputs, name=name, next=next)
+        self.activation = activation
+        self.activation_derivative = derivative(self.activation)
+
+    def __repr__(self):
+        text = (f"{type(self).__name__}("f"num_outputs={self.outputs},"
+                f" "f"name='{self.name}',"f" "f"activation='{self.activation.__name__}'"")")
+        if self.next is not None:
+            text += f" + {self.next!r}"
+        return text
+
+    def __call__(self, xs, ys=None, alpha=None):
+        # Prepare the list for the activated output values
+        hh = []
+        for x in xs:
+            # Compute the activated output for each input x
+            h = [self.activation(x[o]) for o in range(self.outputs)]
+            hh.append(h)
+
+        # Perform the feedforward operation and receive the next layer's results and back-propagation values
+        yhats, loss, gradients = self.next(hh, ys, alpha=alpha)
+
+        if not alpha:
+            # If alpha is not specified, we're not in training mode, so return only the predictions and loss
+            return yhats, loss, None
+
+        # Calculate the gradients from the loss to the pre-activation value
+        gradients_to_pre_activations = []
+        for x, gradient in zip(xs, gradients):
+            # For each input x and its corresponding gradient, calculate the gradient from the loss to the
+            # pre-activation value
+            gradient_to_pre_activation = [self.activation_derivative(x[o]) * gradient[o] for o in range(self.outputs)]
+            gradients_to_pre_activations.append(gradient_to_pre_activation)
+
+        return yhats, loss, gradients_to_pre_activations
+
+
+class LossLayer(Layer):
+    def __init__(self, loss=mean_squared_error, name=None):
+        super().__init__(outputs=None, name=name)
+        self.loss = loss
+
+    def __repr__(self):
+        text = f'LossLayer(loss={self.loss.__name__}, name={self.name})'
+        return text
+
+    def add(self, next):
+        raise NotImplementedError("It is not possible to add a layer to a LossLayer,"
+                                  "since a network should always end with a single LossLayer")
+
+    def __call__(self, hh, ys=None, alpha=None):
+        # yhats is the output of the previous layer, because the loss layer is always last
+        yhats = hh
+        # losses, the loss, which will be a list of losses for all outputs in yhats, starts at None
+        losses = None
+        # gradient_vector_list, will be list of gradient vectors, one for each instance, with one value for each output of the prev layer
+        # starts None
+        gradient_vector_list = None
+        if ys:
+            losses = []
+            # For all instances calculate loss:
+            for yhat, y in zip(yhats, ys):
+                # Take sum of the loss of all outputs(number of outputs previous layer=inputs this layer)
+                ln = sum(self.loss(yhat[o], y[o]) for o in range(self.inputs))
+                losses.append(ln)
+
+            # If there is a learning rate
+            if alpha:
+                gradient_vector_list = []
+                # Calculate a gradient vectors for all instances in yhats
+                for yhat, y in zip(yhats, ys):
+                    # Each instance can have multiple outputs, with the derivative of the loss we calculate dl/dyhat
+                    gln = [derivative(self.loss)(yhat[o], y[o]) for o in range(self.inputs)]
+                    gradient_vector_list.append(gln)
+        return yhats, losses, gradient_vector_list

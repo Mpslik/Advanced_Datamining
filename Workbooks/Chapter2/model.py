@@ -255,44 +255,33 @@ class Neuron:
         self.loss = loss
 
     def predict(self, xs):
-        predictions = []
-        for instance in xs:
-            prediction = self.bias
-            for i in range(len(instance)):
-                prediction += self.weights[i] * instance[i]
-            predictions.append(self.activation(prediction))
-        return predictions
+
+        return [self.activation(self.bias + sum(w * x for w, x in zip(self.weights, instance))) for instance in xs]
 
     def partial_fit(self, xs, ys, alpha=0.001):
         for x, y in zip(xs, ys):
-            prediction = self.bias
-            for i in range(len(x)):
-                prediction += self.weights[i] * x[i]
+            prediction = self.bias + sum(w * xi for w, xi in zip(self.weights, x))
 
             loss_gradient = derivative(self.loss)(prediction, y)
             activation_gradient = derivative(self.activation)(prediction)
 
             self.bias -= alpha * loss_gradient * activation_gradient
-            for i in range(len(x)):
-                self.weights[i] -= alpha * loss_gradient * activation_gradient * x[i]
+            self.weights = [w - alpha * loss_gradient * activation_gradient * xi for w, xi in zip(self.weights, x)]
 
-    def fit(self, xs, ys, *, epochs=100):
-
-        prev_weights = self.weights
+    def fit(self, xs, ys, epochs=0):
+        prev_weights = self.weights.copy()
         prev_bias = self.bias
         epoch = 0
 
         while True:
             self.partial_fit(xs, ys)
             if prev_weights == self.weights and prev_bias == self.bias:
-                break  # geen veranderingen in de weights en bias dus stoppen
-            # updaten van weight en bias
+                break
             prev_weights = self.weights.copy()
             prev_bias = self.bias
             epoch += 1
             if epochs != 0 and epoch >= epochs:
-                break  # Stop als het opgeven max. aantal epochs behaald is
+                break
 
     def __repr__(self):
-        text = f'Neuron(dim={self.dim}, activation={self.activation.__name__}, loss={self.loss.__name__})'
-        return text
+        return f'Neuron(dim={self.dim}, activation={self.activation.__name__}, loss={self.loss.__name__})'
