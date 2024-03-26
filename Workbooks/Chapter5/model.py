@@ -17,7 +17,7 @@ def linear(x):
 
 def sign(x):
     """
-    Signum activation function
+    signum activation function
     that return a value of -1 or 1 depending on the value of x
     -1 for negative numbers and 1 for positive numbers
     :param x:
@@ -32,13 +32,77 @@ def sign(x):
 
 
 def tanh(x):
+    return math.tanh(x)
+
+
+def softsign(x):
     """
-    Tanh activation function
-    returns the tanh value of given  x
+    Softsign activation function
     :param x:
     :return:
     """
-    return (math.e ** x - math.e ** - x) / (math.e ** x + math.e ** - x)
+    return x / (abs(x) + 1)
+
+
+def sigmoid(x):
+    """
+
+    :param x:
+    :return:
+    """
+    if x >= 0:
+        z = math.exp(-x)
+        return 1 / (1 + z)
+    else:
+        # For x < 0, avoid overflow with rearrangement
+        z = math.exp(x)
+        return z / (1 + z)
+
+
+def softplus(x):
+    """
+
+    :param x:
+    :return:
+    """
+    return math.log(1 + math.exp(-abs(x))) + max(x, 0)
+
+
+def relu(x):
+    """
+
+    :param x:
+    :return:
+    """
+
+    return max(0, x)
+
+
+def swish(x):
+    """
+
+    :param x:
+    :return:
+    """
+    return x * sigmoid(x)
+
+
+def softmax(x):
+    """
+
+    :param x:
+    :return:
+    """
+    # Normalize x to prevent OverflowError, by subtracting the max from the vector
+    max_value = max(x)
+    x_normalized = [value - max_value for value in x]
+    # Calculate the sum of e^xi for every value xi in the normalized list x,
+    # used as the denominator in the softmax function
+    sum_exp = sum(math.exp(xi) for xi in x_normalized)
+    # Apply softmax function to the normalized list x
+    softmax_values = [math.exp(xi) / sum_exp for xi in x_normalized]
+    # Return probability distribution
+    return softmax_values
 
 
 # error/ loss functions
@@ -71,6 +135,40 @@ def mean_absolute_error(y_true, y_pred):
     :return:
     """
     return abs(y_pred - y_true)
+
+
+def binary_crossentropy(y_pred, y_true, epsilon=0.0001):
+    """
+    calculates the binary cross entropy loss.
+    :param y_pred:
+    :param y_true:
+    :param epsilon:
+    :return:
+    """
+    return -y_true * pseudo_log(y_pred, epsilon) - (1 - y_true) * pseudo_log(1 - y_pred, epsilon)
+
+
+def categorical_crossentropy(y_pred, y_true, epsilon=0.0001):
+    """
+    calculates the categorical cross entropy loss.
+    :param y_pred:
+    :param y_true:
+    :param epsilon:
+    :return:
+    """
+    return -y_true * pseudo_log(y_pred, epsilon)
+
+
+def pseudo_log(x, epsilon=0.001):
+    """
+    Provides a numerically stable logarithm calculation to prevent math domain errors.
+    :param x:
+    :param epsilon:
+    :return:
+    """
+    if x < epsilon:
+        return math.log(epsilon) + (x - epsilon) / epsilon
+    return math.log(x)
 
 
 # derivative wrapper
@@ -377,12 +475,66 @@ class InputLayer(Layer):
         loss_mean = sum(ls) / len(ls)
         return loss_mean
 
-    def partial_fit(self, xs, ys, alpha=0.001):
-        self(xs, ys, alpha)
+    def partial_fit(self, xs, ys, *, alpha=0.001, batch_size=None):
+        """
 
-    def fit(self, xs, ys, epochs=800, alpha=0.001):
-        for _ in range(epochs):
-            self.partial_fit(xs, ys, alpha=alpha)
+        :param xs:
+        :param ys:
+        :param alpha:
+        :param batch_size:
+        :return:
+        """
+        input_length = len(xs)
+        # determine the actual batch size
+        batch_size = input_length if batch_size is None or batch_size >= input_length else batch_size
+
+        total_loss = 0
+
+        for batch_start in range(0, input_length, batch_size):
+            batch_end = min(batch_start + batch_size, input_length)
+            x_batch, y_batch = xs[batch_start:batch_end], ys[batch_start:batch_end]
+
+            # assuming self(x_batch, y_batch, alpha) returns model predictions, batch loss, and updates model
+            _, batch_losses, _ = self(x_batch, y_batch, alpha)
+            total_loss += sum(batch_losses)
+
+        mean_loss = total_loss / input_length  # calculate mean loss across all samples
+        return mean_loss
+
+    def fit(self, xs, ys, *, epochs=800, alpha=0.001, batch_size=None, validation_data=None):
+        """
+
+        :param xs:
+        :param ys:
+        :param epochs:
+        :param alpha:
+        :param batch_size:
+        :param validation_data:
+        :return:
+        """
+        history = {'loss': []}
+        evaluate_validation = validation_data is not None
+        if evaluate_validation:
+            history['val_loss'] = []
+            val_xs, val_ys = validation_data
+
+        for epoch in range(epochs):
+            # combine xs and ys into a list of tuples and shuffle
+            combined = list(zip(xs, ys))
+            random.shuffle(combined)
+            # unzip the shuffled list of tuples back into xs and ys
+            xs_shuffled, ys_shuffled = zip(*combined)
+
+            # train on the shuffled data and record mean loss for this epoch
+            epoch_loss = self.partial_fit(xs_shuffled, ys_shuffled, alpha=alpha, batch_size=batch_size)
+            history['loss'].append(epoch_loss)
+
+            # evaluate on validation data and record loss
+            if evaluate_validation:
+                validation_loss = self.evaluate(val_xs, val_ys)
+                history['val_loss'].append(validation_loss)
+
+        return history
 
     def __repr__(self):
         text = f'InputLayer(outputs={self.outputs}, name={repr(self.name)})'
@@ -473,7 +625,6 @@ class ActivationLayer(Layer):
         # if training check do backwards propogation
         if ys is not None and alpha is not None:
 
-
             # calculate the gradients from the loss to the pre-activation value
             gradients_to_pre_activations = []
             for x, gradient in zip(xs, gradients):
@@ -521,3 +672,34 @@ class LossLayer(Layer):
 
         # outputs for further use
         return yhats, losses, gradient_vector_list
+
+
+class SoftmaxLayer(Layer):
+    """
+
+    """
+
+    def __init__(self, outputs, *, name=None, next=None):
+        super().__init__(outputs, name=name, next=next)
+
+    def __repr__(self):
+        return f'SoftmaxLayer(outputs={self.outputs}, name={self.name})'
+
+    def __call__(self, xs, ys=None, alpha=None):
+        yhats = []  # Probability distributions for each instance
+        gradients_to_h = None
+
+        for x in xs:
+            prob = softmax(x)
+            yhats.append(prob)
+
+        predictions, losses, gradients_from_loss = self.next(yhats, ys, alpha)
+
+        if alpha and gradients_from_loss is not None:
+            gradients_to_h = [
+                [sum(gradients_from_loss[o] * prediction[o] * ((i == o) - prediction[i]) for o in range(self.outputs))
+                 for i in range(self.inputs)] for prediction, gradients_from_loss in
+                zip(predictions, gradients_from_loss)
+            ]
+
+        return predictions, losses, gradients_to_h
