@@ -109,20 +109,19 @@ def softmax(x):
 
 def nipuna(x, beta=1):
     """
-    NIPUNA
-    :param x:
-    :param beta:
-    :return: t
+    NIPUNA Activation Function to handle large inputs without overflow.
     """
-    # Compute the numerator in the expression for g(x)
-    if beta * x >= 0:
-        g_x = x - math.log1p(math.exp(-beta * x))
+    # Check for overflow condition in the exponentiation
+    if -beta * x > 700:
+        #
+        exp_term = 0.0
     else:
-        g_x = math.exp(beta * x) * x / (math.exp(beta * x) + 1) - math.log1p(math.exp(beta * x))
+        # Safe to compute the exponential term
+        exp_term = math.exp(-beta * x)
 
-    # Compute the maximum of g(x) and x
-    max_g_x = max(g_x, x)
-    return max_g_x
+    # Calculate the NIPUNA function with overflow protection
+    gx = x / (1 + exp_term)
+    return max(gx, x)
 
 # error/ loss functions
 def hinge(y_true, y_phred):
