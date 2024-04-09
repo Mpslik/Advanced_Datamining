@@ -210,61 +210,53 @@ def derivative(function, delta=0.001):
     return wrapper_derivative
 
 
-def progress_bar(epoch, total_epochs, start_time, bar_width = 40):
-    """
-    Prints a progress bar to the console.
-    :param epoch: the current epoch
-    :param total_epochs: the total number of epochs
-    :param start_time: the time when the training started
-    :param bar_width: the width of the progress bar
-    """
-    # Get the current time and calculate the elapsed time
-    current_time = time.time()
-    elapsed_time = current_time - start_time
+class ProgressBar:
+    def __init__(self, total_epochs, bar_width=40):
+        self.total_epochs = total_epochs
+        self.bar_width = bar_width
+        # Initialize last_epoch_time at the start to ensure it's set before the first update call
+        self.last_epoch_time = time.time()
 
-    # Calculate the elapsed time in minutes and seconds
-    elapsed_minutes, elapsed_seconds = divmod(elapsed_time, 60)
+    def format_time(self, seconds):
+        """Formats seconds into a string HH:MM:SS.mmm, including milliseconds for durations less than a second."""
+        hours, remainder = divmod(int(seconds), 3600)
+        minutes, int_seconds = divmod(remainder, 60)
+        milliseconds = int((seconds - int(seconds)) * 1000)  # Calculate milliseconds
 
-    # Format the elapsed time as a string
-    elapsed_str = f"{int(elapsed_minutes):02d}:{int(elapsed_seconds):02d}"
+        # Adjust formatting to include milliseconds for all durations
+        formatted_time = f"{hours:02d}:{minutes:02d}:{int_seconds:02d}.{milliseconds:03d}"
+        return formatted_time
 
-    # If it's not the first epoch
-    if epoch > 0:
-        # Get the time of the last epoch and calculate the elapsed time since then
-        last_epoch_time = getattr(progress_bar, "last_epoch_time", current_time)
-        epoch_elapsed_time = current_time - last_epoch_time
+    def update(self, epoch, start_time):
+        # Capture the current time at the start of this update
+        current_time = time.time()
+        elapsed_time = current_time - start_time
+        elapsed_str = self.format_time(elapsed_time)
 
-        # Calculate the elapsed time in minutes and seconds
-        epoch_elapsed_minutes, epoch_elapsed_seconds = divmod(epoch_elapsed_time, 60)
+        # Calculate the time since the last epoch using the last_epoch_time
+        epoch_elapsed_time = current_time - self.last_epoch_time
+        epoch_elapsed_str = self.format_time(epoch_elapsed_time)
 
-        # Format the elapsed time since the last epoch as a string
-        epoch_elapsed_str = f"{int(epoch_elapsed_minutes):02d}:{int(epoch_elapsed_seconds):02d}"
-    else:
-        # If it's the first epoch, set the elapsed time to 00:00
-        epoch_elapsed_str = "00:00"
+        percent_complete = (epoch + 1) / self.total_epochs * 100
+        completed_width = int(self.bar_width * percent_complete / 100)
+        remaining_width = self.bar_width - completed_width
+        progress_str = "▓" * completed_width + "░" * remaining_width
 
-    # Save the current time as the time of the last epoch
-    progress_bar.last_epoch_time = current_time
+        # Construct the progress bar string with colors
+        epoch_info = f"\033[92mEpoch {epoch + 1}/{self.total_epochs}\033[0m"
+        bar = f"[\033[94m{progress_str}\033[0m]"
+        percent = f"\033[93m{percent_complete:.0f}%\033[0m"
+        elapsed = f"\033[95mElapsed time: {elapsed_str}\033[0m"
+        since_last = f"\033[96mTime since last epoch: {epoch_elapsed_str}\033[0m"
 
-    # Calculate the percentage of epochs completed
-    percent_complete = epoch / total_epochs * 100
+        print(f"\r{epoch_info} {bar} {percent} | {elapsed} | {since_last}", end="", flush=True)
 
-    # Calculate the width of the progress bar
-    completed_width = int(bar_width * percent_complete / 100)
-    remaining_width = bar_width - completed_width
+        # Ensure the progress bar stays visible after completion
+        if epoch + 1 == self.total_epochs:
+            print()
 
-    # Create the progress bar
-    completed_bar = "#" * completed_width
-    remaining_bar = " " * remaining_width
-
-    # Format the percentage as a string
-    percentage_str = f"{percent_complete:.0f}%"
-
-    print(
-        f"\rEpoch {epoch + 1}/{total_epochs} [{completed_bar}{remaining_bar}] {percentage_str} | Elapsed time: {elapsed_str} | Time since last epoch: {epoch_elapsed_str}",
-        end="",
-        flush=True,
-    )
+        # Update last_epoch_time AFTER printing to capture the start time for the next epoch's duration calculation
+        self.last_epoch_time = current_time
 
 # perceptron, linearregression and neuron classes
 
@@ -551,9 +543,8 @@ class InputLayer(Layer):
         mean_loss = total_loss / input_length  # calculate mean loss across all samples
         return mean_loss
 
-    def fit(self, xs, ys, *, epochs=500 , alpha=0.001, batch_size=None, validation_data=None):
+    def fit(self, xs, ys, *, epochs=500, alpha=0.001, batch_size=None, validation_data=None):
         """
-
         :param xs:
         :param ys:
         :param epochs:
@@ -569,8 +560,13 @@ class InputLayer(Layer):
             history['val_loss'] = []
             val_xs, val_ys = validation_data
 
+        # Instantiate the ProgressBar
+        progress_bar = ProgressBar(total_epochs=epochs)
+
         for epoch in range(epochs):
-            progress_bar(epoch=epoch, total_epochs=epochs, start_time=start_time)
+            # Updating the bar
+            progress_bar.update(epoch=epoch, start_time=start_time)
+
             # combine xs and ys into a list of tuples and shuffle
             combined = list(zip(xs, ys))
             random.shuffle(combined)
@@ -585,6 +581,8 @@ class InputLayer(Layer):
             if evaluate_validation:
                 validation_loss = self.evaluate(val_xs, val_ys)
                 history['val_loss'].append(validation_loss)
+
+
 
         return history
 
