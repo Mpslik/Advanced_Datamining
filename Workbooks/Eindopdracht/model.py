@@ -3,131 +3,124 @@ import random
 import time
 from collections import Counter
 from copy import deepcopy
+from typing import List, Tuple, Callable, Any, Optional
 
 
-
-# activation functions
-def linear(x):
+# Activation functions
+def linear(x: float) -> float:
     """
     Linear activation function
-    returns x
-    :param x:
+    :param x: input float
     :return: x
     """
     return x
 
 
-def sign(x):
+def sign(x: float) -> float:
     """
-    signum activation function
-    that return a value of -1 or 1 depending on the value of x
-    -1 for negative numbers and 1 for positive numbers
-    :param x:
-    :return: 1 for positive, -1 for negative numbers of X
+    Signum activation function
+    that returns a value of -1, 0, or 1 depending on the value of x
+    :param x: input float
+    :return: 1 for positive, -1 for negative, 0 for zero
     """
     if x > 0:
         return 1
-    if x < 0:
+    elif x < 0:
         return -1
     else:
         return 0
 
 
-def tanh(x):
+def tanh(x: float) -> float:
+    """
+    Hyperbolic tangent activation function
+    :param x: input float
+    :return: tanh(x)
+    """
     return math.tanh(x)
 
 
-def softsign(x):
+def softsign(x: float) -> float:
     """
     Softsign activation function
-    :param x:
-    :return:
+    :param x: input float
+    :return: the softsign of x
     """
     return x / (abs(x) + 1)
 
 
-def sigmoid(x):
+def sigmoid(x: float) -> float:
     """
-
-    :param x:
-    :return:
+    Sigmoid activation function
+    :param x: input float
+    :return: the sigmoid value of x
     """
     if x >= 0:
         z = math.exp(-x)
         return 1 / (1 + z)
     else:
-        # For x < 0, avoid overflow with rearrangement
         z = math.exp(x)
         return z / (1 + z)
 
 
-def softplus(x):
+def softplus(x: float) -> float:
     """
-
-    :param x:
-    :return:
+    Softplus activation function
+    :param x: input float
+    :return: the softplus of x
     """
     return math.log(1 + math.exp(-abs(x))) + max(x, 0)
 
 
-def relu(x):
+def relu(x: float) -> float:
     """
-
-    :param x:
-    :return:
+    ReLU activation function
+    :param x: input float
+    :return: max(0, x)
     """
-
     return max(0, x)
 
 
-def swish(x):
+def swish(x: float) -> float:
     """
-
-    :param x:
-    :return:
+    Swish activation function
+    :param x: input float
+    :return: x multiplied by the sigmoid of x
     """
     return x * sigmoid(x)
 
 
-def softmax(x):
+def softmax(x: List[float]) -> List[float]:
     """
-
-    :param x:
-    :return:
+    Softmax activation function
+    :param x: list of float
+    :return: list of softmax probabilities
     """
-    # Normalize x to prevent OverflowError, by subtracting the max from the vector
     max_value = max(x)
     x_normalized = [value - max_value for value in x]
-    # Calculate the sum of e^xi for every value xi in the normalized list x,
-    # used as the denominator in the softmax function
     sum_exp = sum(math.exp(xi) for xi in x_normalized)
-    # Apply softmax function to the normalized list x
-    softmax_values = [math.exp(xi) / sum_exp for xi in x_normalized]
-    # Return probability distribution
-    return softmax_values
+    return [math.exp(xi) / sum_exp for xi in x_normalized]
 
 
-def nipuna(x, beta=1):
+def nipuna(x: float, beta: float = 1.0) -> float:
     """
     NIPUNA Activation Function to handle large inputs without overflow.
+    :param x: input float
+    :param beta: scaling parameter
+    :return: output of the NIPUNA function
     """
-    # Check for overflow condition in the exponentiation
     if -beta * x > 700:
-        #
         exp_term = 0.0
     else:
-        # Safe to compute the exponential term
         exp_term = math.exp(-beta * x)
-
-    # Calculate the NIPUNA function with overflow protection
     gx = x / (1 + exp_term)
     return max(gx, x)
 
+
 # error/ loss functions
-def hinge(y_true, y_phred):
+def hinge(y_true: float, y_phred: float) -> float:
     """
     Hinge error function
-    r
     :param y_true:
     :param y_phred:
     :return:
@@ -135,27 +128,27 @@ def hinge(y_true, y_phred):
     return max(1 - y_phred * y_true, 0)
 
 
-def mean_squared_error(y_true, y_pred):
+def mean_squared_error(y_true: float, y_phred: float) -> float:
     """
     Mean squared error, returns the mean squared error of the prediction
     :param y_true:
-    :param y_pred:
+    :param y_phred:
     :return:
     """
-    return (y_pred - y_true) ** 2
+    return (y_phred - y_true) ** 2
 
 
-def mean_absolute_error(y_true, y_pred):
+def mean_absolute_error(y_true: float, y_phred: float) -> float:
     """
     returns the mean absolute error of the prediction
     :param y_true:
-    :param y_pred:
+    :param y_phred:
     :return:
     """
-    return abs(y_pred - y_true)
+    return abs(y_phred - y_true)
 
 
-def binary_crossentropy(y_pred, y_true, epsilon=0.0001):
+def binary_crossentropy(y_true: float, y_phred: float,  epsilon: float=0.0001) -> float:
     """
     calculates the binary cross entropy loss.
     :param y_pred:
@@ -163,10 +156,10 @@ def binary_crossentropy(y_pred, y_true, epsilon=0.0001):
     :param epsilon:
     :return:
     """
-    return -y_true * pseudo_log(y_pred, epsilon) - (1 - y_true) * pseudo_log(1 - y_pred, epsilon)
+    return -y_true * pseudo_log(y_phred, epsilon) - (1 - y_true) * pseudo_log(1 - y_phred, epsilon)
 
 
-def categorical_crossentropy(y_pred, y_true, epsilon=0.0001):
+def categorical_crossentropy(y_true: float, y_phred: float,  epsilon: float=0.0001) -> float:
     """
     calculates the categorical cross entropy loss.
     :param y_pred:
@@ -174,10 +167,10 @@ def categorical_crossentropy(y_pred, y_true, epsilon=0.0001):
     :param epsilon:
     :return:
     """
-    return -y_true * pseudo_log(y_pred, epsilon)
+    return -y_true * pseudo_log(y_phred, epsilon)
 
 
-def pseudo_log(x, epsilon=0.001):
+def pseudo_log(x: float, epsilon: float=0.001):
     """
     Provides a numerically stable logarithm calculation to prevent math domain errors.
     :param x:
@@ -191,16 +184,24 @@ def pseudo_log(x, epsilon=0.001):
 
 # derivative wrapper
 
-def derivative(function, delta=0.001):
+def derivative(function: Callable[..., float], delta: float = 0.001) -> Callable[..., float]:
     """
     Calculates the derivative of a function for the given value.
-    used for calculation of the slope at a given point.
-    :param function:
-    :param delta: the step size to use in derivative calculation
-    :return:
+    Used for calculation of the slope at a given point.
+
+    :param function: The function to differentiate, which should take one or more float arguments and return a float.
+    :param delta: The step size to use in derivative calculation.
+    :return: A function that calculates the derivative of the given function at a point.
     """
 
-    def wrapper_derivative(x, *args):
+    def wrapper_derivative(x: float, *args: Any) -> float:
+        """
+        Wrapper function that computes the numerical derivative.
+
+        :param x: The point at which to calculate the derivative.
+        :param args: Additional arguments passed to the function.
+        :return: The derivative of the function at point x.
+        """
         return (function(x + delta, *args) - function(x - delta, *args)) / (2 * delta)
 
     # Give it a distinct name
@@ -211,29 +212,43 @@ def derivative(function, delta=0.001):
 
 
 class ProgressBar:
-    def __init__(self, total_epochs, bar_width=40):
+    def __init__(self, total_epochs: int, bar_width: int = 40) -> None:
+        """
+        Initialize the ProgressBar with the total number of epochs and optional bar width.
+
+        :param total_epochs: Total number of epochs the progress bar will represent.
+        :param bar_width: Optional width of the progress bar in characters. Default is 40.
+        """
         self.total_epochs = total_epochs
         self.bar_width = bar_width
-        # Initialize last_epoch_time at the start to ensure it's set before the first update call
         self.last_epoch_time = time.time()
 
-    def format_time(self, seconds):
-        """Formats seconds into a string HH:MM:SS.mmm, including milliseconds for durations less than a second."""
+    def format_time(self, seconds: float) -> str:
+        """
+        Formats seconds into a string HH:MM:SS.mmm, including milliseconds for durations less than a second.
+
+        :param seconds: Time duration in seconds to format.
+        :return: Formatted time as a string.
+        """
+        # Dividing everything in the correct time format
         hours, remainder = divmod(int(seconds), 3600)
         minutes, int_seconds = divmod(remainder, 60)
-        milliseconds = int((seconds - int(seconds)) * 1000)  # Calculate milliseconds
-
-        # Adjust formatting to include milliseconds for all durations
+        milliseconds = int((seconds - int_seconds) * 1000)
+        # Setting the returned string
         formatted_time = f"{hours:02d}:{minutes:02d}:{int_seconds:02d}.{milliseconds:03d}"
         return formatted_time
 
-    def update(self, epoch, start_time):
-        # Capture the current time at the start of this update
+    def update(self, epoch: int, start_time: float) -> None:
+        """
+        Updates the progress bar display for the given epoch.
+
+        :param epoch: The current epoch number.
+        :param start_time: The start time of the process (for overall elapsed time calculation).
+        """
         current_time = time.time()
         elapsed_time = current_time - start_time
         elapsed_str = self.format_time(elapsed_time)
 
-        # Calculate the time since the last epoch using the last_epoch_time
         epoch_elapsed_time = current_time - self.last_epoch_time
         epoch_elapsed_str = self.format_time(epoch_elapsed_time)
 
@@ -242,7 +257,6 @@ class ProgressBar:
         remaining_width = self.bar_width - completed_width
         progress_str = "▓" * completed_width + "░" * remaining_width
 
-        # Construct the progress bar string with colors
         epoch_info = f"\033[92mEpoch {epoch + 1}/{self.total_epochs}\033[0m"
         bar = f"[\033[94m{progress_str}\033[0m]"
         percent = f"\033[93m{percent_complete:.0f}%\033[0m"
@@ -251,12 +265,11 @@ class ProgressBar:
 
         print(f"\r{epoch_info} {bar} {percent} | {elapsed} | {since_last}", end="", flush=True)
 
-        # Ensure the progress bar stays visible after completion
         if epoch + 1 == self.total_epochs:
-            print()
+            print()  # Move to new line after final epoch
 
-        # Update last_epoch_time AFTER printing to capture the start time for the next epoch's duration calculation
-        self.last_epoch_time = current_time
+        self.last_epoch_time = current_time  # Update the last epoch time for next calculation
+
 
 # perceptron, linearregression and neuron classes
 
