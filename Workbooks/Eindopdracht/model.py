@@ -184,7 +184,7 @@ def pseudo_log(x: float, epsilon: float = 0.001):
 
 # derivative wrapper
 
-def derivative(function: callable[..., float], delta: float = 0.001) -> callable[..., float]:
+def derivative(function: callable, delta: float = 0.001) -> callable:
     """
     Calculates the derivative of a function for the given value.
     Used for calculation of the slope at a given point.
@@ -433,8 +433,8 @@ class LinearRegression:
 
 
 class Neuron:
-    def __init__(self, dim: int, activation: callable[[float], float] = linear,
-                 loss: callable[[float, float], float] = mean_squared_error):
+    def __init__(self, dim: int, activation: callable = linear,
+                 loss: callable = mean_squared_error):
         """
         Initialize a Neuron with a specified number of input dimensions, an activation function, and a loss function.
 
@@ -796,7 +796,7 @@ class ActivationLayer(Layer):
                  *,
                  name: str = None,
                  next: 'Layer' = None,
-                 activation: callable[[float], float] = linear):
+                 activation: callable = linear):
         """
         Initializes an Activation Layer with a specific activation function applied to each neuron's output.
 
@@ -850,7 +850,7 @@ class ActivationLayer(Layer):
 
 
 class LossLayer(Layer):
-    def __init__(self, loss: callable[[float, float], float] = mean_squared_error, name: str = None):
+    def __init__(self, loss: callable = mean_squared_error, name: str = None):
         """
         Initializes a Loss Layer that computes the loss between predictions and actual target values.
 
