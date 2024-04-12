@@ -118,37 +118,37 @@ def nipuna(x: float, beta: float = 1.0) -> float:
 
 
 # error/ loss functions
-def hinge(y_true: float, y_phred: float) -> float:
+def hinge(y_pred: float, y_true: float) -> float:
     """
     Hinge error function
     :param y_true:
-    :param y_phred:
+    :param y_pred:
     :return:
     """
-    return max(1 - y_phred * y_true, 0)
+    return max(1 - y_pred * y_true, 0)
 
 
-def mean_squared_error(y_true: float, y_phred: float) -> float:
+def mean_squared_error(y_pred: float, y_true: float) -> float:
     """
     Mean squared error, returns the mean squared error of the prediction
     :param y_true:
-    :param y_phred:
+    :param y_pred:
     :return:
     """
-    return (y_phred - y_true) ** 2
+    return (y_pred - y_true) ** 2
 
 
-def mean_absolute_error(y_true: float, y_phred: float) -> float:
+def mean_absolute_error(y_pred: float, y_true: float) -> float:
     """
     returns the mean absolute error of the prediction
     :param y_true:
-    :param y_phred:
+    :param y_pred:
     :return:
     """
-    return abs(y_phred - y_true)
+    return abs(y_pred - y_true)
 
 
-def binary_crossentropy(y_true: float, y_phred: float,  epsilon: float=0.0001) -> float:
+def binary_crossentropy(y_pred: float, y_true: float, epsilon: float = 0.0001) -> float:
     """
     calculates the binary cross entropy loss.
     :param y_pred:
@@ -156,10 +156,10 @@ def binary_crossentropy(y_true: float, y_phred: float,  epsilon: float=0.0001) -
     :param epsilon:
     :return:
     """
-    return -y_true * pseudo_log(y_phred, epsilon) - (1 - y_true) * pseudo_log(1 - y_phred, epsilon)
+    return -y_true * pseudo_log(y_pred, epsilon) - (1 - y_true) * pseudo_log(1 - y_pred, epsilon)
 
 
-def categorical_crossentropy(y_true: float, y_phred: float,  epsilon: float=0.0001) -> float:
+def categorical_crossentropy(y_pred: float, y_true: float, epsilon: float = 0.0001) -> float:
     """
     calculates the categorical cross entropy loss.
     :param y_pred:
@@ -167,10 +167,10 @@ def categorical_crossentropy(y_true: float, y_phred: float,  epsilon: float=0.00
     :param epsilon:
     :return:
     """
-    return -y_true * pseudo_log(y_phred, epsilon)
+    return -y_true * pseudo_log(y_pred, epsilon)
 
 
-def pseudo_log(x: float, epsilon: float=0.001):
+def pseudo_log(x: float, epsilon: float = 0.001):
     """
     Provides a numerically stable logarithm calculation to prevent math domain errors.
     :param x:
@@ -275,87 +275,79 @@ class ProgressBar:
 
 
 class Perceptron:
-    def __init__(self, dim, bias=0, weights=None, learning_rate=0.01):
+    def __init__(self, dim: int, bias: float = 0, weights: Optional[List[float]] = None, learning_rate: float = 0.01):
         """
+        Initialize the Perceptron with a specified dimension, bias, initial weights, and learning rate.
 
-        :param dim:
-        :param bias:
-        :param weights:
-        :param learning_rate:
+        :param dim: Dimensionality of the input features.
+        :param bias: Initial bias value.
+        :param weights: Initial list of weights; if None, weights are initialized to zero.
+        :param learning_rate: The learning rate used in training.
         """
         self.dim = dim
         self.bias = bias
         self.learning_rate = learning_rate
         if weights is None:
-            # bij geen opgegeven weights gelijk stellen aan 0 en de opgegeven dimensie
-            self.weights = [0] * dim
+            self.weights = [0.0] * dim
         else:
-            # aantal weights gelijk gesteld aan de dimensie
             assert len(weights) == dim, "Length of weights should match the dimensionality"
             self.weights = weights
 
-    def predict(self, xs):
+    def predict(self, xs: List[List[float]]) -> List[int]:
         """
+        Predict the label of each instance in the dataset.
 
-        :param xs:
-        :return:
+        :param xs: A list of instances, where each instance is a list of feature values.
+        :return: A list of predicted labels.
         """
-        predictions = []
-        for instance in xs:
-            prediction = self.predict_instance(instance)
-            predictions.append(prediction)
+        predictions = [self.predict_instance(instance) for instance in xs]
         return predictions
 
-    def predict_instance(self, instance):
+    def predict_instance(self, instance: List[float]) -> float:
         """
-        :param instance:
-        :return:
+        Make a prediction for a single instance.
+
+        :param instance: A single instance represented as a list of feature values.
+        :return: The predicted label for the instance.
         """
         prediction = self.bias
-        for i in range(len(instance)):
-            prediction += self.weights[i] * instance[i]
+        for weight, feature in zip(self.weights, instance):
+            prediction += weight * feature
         return sign(prediction)
 
-    def partial_fit(self, xs, ys):
+    def partial_fit(self, xs: List[List[float]], ys: List[float]):
         """
+        Perform a partial fit for one epoch over the dataset.
 
-        :param self:
-        :param xs:
-        :param ys:
-        :return:
+        :param xs: A list of instances.
+        :param ys: The true labels corresponding to each instance.
         """
         for x, y in zip(xs, ys):
             prediction = self.predict_instance(x)
-            self.bias -= (prediction - y)
-            for i in range(len(x)):
-                self.weights[i] -= (prediction - y) * x[i]
+            error = y - prediction
+            self.bias += self.learning_rate * error
+            self.weights = [w + self.learning_rate * error * xi for w, xi in zip(self.weights, x)]
 
-    def fit(self, xs, ys, *, epochs=500):
+    def fit(self, xs: List[List[float]], ys: List[float], *, epochs: int = 500) -> None:
         """
+        Fit the Perceptron model to the data, stopping early if weights and bias do not change.
 
-        :param self:
-        :param xs:
-        :param ys:
-        :param epochs:
-        :return:
+        :param xs: A list of instances.
+        :param ys: A list of true labels for the instances.
+        :param epochs: Maximum number of epochs for training.
         """
-        prev_weights = self.weights
+        prev_weights = self.weights.copy()
         prev_bias = self.bias
-        epoch = 0
-        while True:
+        for epoch in range(epochs):
             self.partial_fit(xs, ys)
             if prev_weights == self.weights and prev_bias == self.bias:
-                break  # geen veranderingen in de weights en bias dus stoppen
-            # updaten van weight en bias
+                print(f"Convergence reached after {epoch} epochs.")
+                break  # Stop training if no changes
             prev_weights = self.weights.copy()
             prev_bias = self.bias
-            epoch += 1
-            if epochs != 0 and epoch >= epochs:
-                break  # stop als het opgeven max aantal epochs behaald is
 
-    def __repr__(self):
-        text = f'Perceptron(dim={self.dim}, bias={self.bias}, weights={self.weights})'
-        return text
+    def __repr__(self) -> str:
+        return f'Perceptron(dim={self.dim}, bias={self.bias}, weights={self.weights})'
 
 
 class LinearRegression:
@@ -595,8 +587,6 @@ class InputLayer(Layer):
                 validation_loss = self.evaluate(val_xs, val_ys)
                 history['val_loss'].append(validation_loss)
 
-
-
         return history
 
     def __repr__(self):
@@ -701,12 +691,12 @@ class ActivationLayer(Layer):
 
 
 class LossLayer(Layer):
-    def __init__(self, loss=mean_squared_error, name=None):
+    def __init__(self, loss_func=mean_squared_error, name=None):
         super().__init__(outputs=None, name=name)
-        self.loss = loss
+        self.loss_func = loss_func
 
     def __repr__(self):
-        text = f'LossLayer(loss={self.loss.__name__}, name={self.name})'
+        text = f'LossLayer(loss={self.loss_func.__name__}, name={self.name})'
         return text
 
     def add(self, next):
@@ -724,12 +714,12 @@ class LossLayer(Layer):
             losses = []
             for yhat, y in zip(yhats, ys):
                 # Take sum of the loss of all outputs(number of outputs previous layer=inputs this layer)
-                loss = sum(self.loss(yhat[o], y[o]) for o in range(self.inputs))
+                loss = sum(self.loss_func(yhat[o], y[o]) for o in range(self.inputs))
                 losses.append(loss)
             # calculate gradients for training
             if alpha:
                 gradient_vector_list = [
-                    [derivative(self.loss)(yhat_i, y_i) for yhat_i, y_i in zip(yhat, y)]
+                    [derivative(self.loss_func)(yhat_i, y_i) for yhat_i, y_i in zip(yhat, y)]
                     for yhat, y in zip(yhats, ys)
                 ]
 
