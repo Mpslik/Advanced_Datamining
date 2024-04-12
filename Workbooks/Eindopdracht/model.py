@@ -351,53 +351,81 @@ class Perceptron:
 
 
 class LinearRegression:
-    def __init__(self, dim, bias=0, weights=None, learning_rate=0.01):
+    def __init__(self, dim: int, bias: float = 0, weights: Optional[List[float]] = None, learning_rate: float = 0.01):
+        """
+        Initialize the Linear Regression model with the specified number of dimensions,
+        bias, initial weights, and learning rate.
+
+        :param dim: The number of features or dimensionality of the input data.
+        :param bias: Initial bias value (default 0).
+        :param weights: Initial list of weights; if None, weights are initialized to zero.
+        :param learning_rate: The learning rate used in training (default 0.01).
+        """
         self.dim = dim
         self.bias = bias
         self.learning_rate = learning_rate
         if weights is None:
-            # bij geen opgegeven weights gelijk stellen aan 0 en de opgegeven dimensie
-            self.weights = [0] * dim
+            self.weights = [0.0] * dim
         else:
-            # aantal weights gelijk gesteld aan de dimensie
             assert len(weights) == dim, "Length of weights should match the dimensionality"
             self.weights = weights
 
-    def predict(self, xs):
-        predictions = []
-        for instance in xs:
-            prediction = self.predict_instance(instance)
-            predictions.append(prediction)
-        return predictions
+    def predict(self, xs: List[List[float]]) -> List[float]:
+        """
+        Predict the output for each instance in the dataset.
 
-    def predict_instance(self, instance):
-        prediction = self.bias
-        for i in range(len(instance)):
-            prediction += self.weights[i] * instance[i]
-        return prediction
+        :param xs: A list of instances, each instance being a list of feature values.
+        :return: A list of predicted values.
+        """
+        return [self.predict_instance(instance) for instance in xs]
 
-    def partial_fit(self, xs, ys):
+    def predict_instance(self, instance: List[float]) -> float:
+        """
+        Predict the output for a single instance using the linear regression model.
+
+        :param instance: A single instance as a list of feature values.
+        :return: The predicted value.
+        """
+        return self.bias + sum(w * xi for w, xi in zip(self.weights, instance))
+
+    def partial_fit(self, xs: List[List[float]], ys: List[float]):
+        """
+        Perform a partial fit on the dataset for one epoch.
+
+        :param xs: A list of instances.
+        :param ys: The corresponding true values for each instance.
+        """
         for x, y in zip(xs, ys):
             prediction = self.predict_instance(x)
-            self.bias -= self.learning_rate * (prediction - y)
-            for i in range(len(x)):
-                self.weights[i] -= self.learning_rate * (prediction - y) * x[i]
+            error = y - prediction
+            self.bias += self.learning_rate * error
+            self.weights = [w + self.learning_rate * error * xi for w, xi in zip(self.weights, x)]
 
-    def fit(self, xs, ys, *, epochs=0):
-        prev_weights = self.weights
+    def fit(self, xs: List[List[float]], ys: List[float], *, epochs: int = 500):
+        """
+        Fit the Linear Regression model to the data, updating weights and bias to minimize the error,
+        and including checks for convergence.
+
+        :param xs: A list of instances.
+        :param ys: A list of true values for the instances.
+        :param epochs: Maximum number of epochs for training or until convergence.
+        """
+        prev_weights = self.weights.copy()
         prev_bias = self.bias
         epoch = 0
         while True:
             self.partial_fit(xs, ys)
             if prev_weights == self.weights and prev_bias == self.bias:
-                break  # geen veranderingen in de weights en bias dus stoppen
-            # updaten van weight en bias
+                print(f"Convergence reached after {epoch} epochs.")
+                break  # No change in weights and bias, so stop
             prev_weights = self.weights.copy()
             prev_bias = self.bias
             epoch += 1
             if epochs != 0 and epoch >= epochs:
-                break  # stop als het opgeven max aantal epochs behaald is
+                break  # Stop if the maximum number of epochs is reached
 
+    def __repr__(self) -> str:
+        return f'LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})'
     def __repr__(self):
         text = f'LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})'
         return text
