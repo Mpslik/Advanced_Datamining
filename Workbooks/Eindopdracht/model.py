@@ -426,66 +426,94 @@ class LinearRegression:
 
     def __repr__(self) -> str:
         return f'LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})'
+
     def __repr__(self):
         text = f'LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})'
         return text
 
 
 class Neuron:
-    def __init__(self, dim, activation=linear, loss=mean_squared_error):
+    def __init__(self, dim: int, activation: Callable[[float], float] = linear,
+                 loss: Callable[[float, float], float] = mean_squared_error):
+        """
+        Initialize a Neuron with a specified number of input dimensions, an activation function, and a loss function.
+
+        :param dim: Number of input features or dimensionality.
+        :param activation: Activation function to use (default is linear).
+        :param loss: Loss function to use (default is mean squared error).
+        """
         self.dim = dim
-        self.bias = 0
-        self.weights = [0] * dim
+        self.bias = 0.0
+        self.weights = [0.0] * dim
         self.activation = activation
         self.loss = loss
 
-    def predict(self, xs):
+    def predict(self, xs: List[List[float]]) -> List[float]:
+        """
+        Predict the output for a batch of input instances.
 
+        :param xs: A list of input vectors, each vector being a list of floats.
+        :return: A list of outputs after applying the neuron's calculation and activation.
+        """
         return [self.activation(self.bias + sum(w * x for w, x in zip(self.weights, instance))) for instance in xs]
 
-    def partial_fit(self, xs, ys, alpha=0.01):
-        for x, y in zip(xs, ys):
-            # calculate the prediction
-            prediction = self.bias + sum(w * xi for w, xi in zip(self.weights, x))
+    def partial_fit(self, xs: List[List[float]], ys: List[float], alpha: float = 0.01):
+        """
+        Perform a partial fit on the dataset for one epoch, updating weights and bias based on the gradient.
 
-            # calculate the  derivatives
+        :param xs: A list of input vectors.
+        :param ys: A list of target values corresponding to each input vector.
+        :param alpha: Learning rate (default is 0.01).
+        """
+        for x, y in zip(xs, ys):
+            prediction = self.bias + sum(w * xi for w, xi in zip(self.weights, x))
             loss_gradient = derivative(self.loss)(prediction, y)
             activation_gradient = derivative(self.activation)(prediction)
             update_factor = alpha * loss_gradient * activation_gradient
 
-            # Updating the bias
             self.bias -= update_factor
-
-            # Updating weights
             self.weights = [w - update_factor * xi for w, xi in zip(self.weights, x)]
 
-    def fit(self, xs, ys, epochs=500, alpha=0.001):
+    def fit(self, xs: List[List[float]], ys: List[float], epochs: int = 500, alpha: float = 0.001):
+        """
+        Fit the neuron to the data over a specified number of epochs.
+
+        :param xs: A list of input vectors.
+        :param ys: A list of target values.
+        :param epochs: Total number of epochs to train (default is 500).
+        :param alpha: Learning rate (default is 0.001).
+        """
         prev_weights = self.weights.copy()
         prev_bias = self.bias
-        epoch = 0
-
-        print("fitting")
-        while True:
+        for epoch in range(epochs):
             self.partial_fit(xs, ys, alpha=alpha)
-
             if prev_weights == self.weights and prev_bias == self.bias:
                 print(f"Converged after {epoch} epochs.")
                 break
             prev_weights = self.weights.copy()
             prev_bias = self.bias
-            epoch += 1
-            if epochs != 0 and epoch >= epochs:
-                print(f"Stopped after reaching the max epochs: {epochs}.")
-                break
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """
+        String representation of the Neuron with details about dimensions and functions used.
+        """
         return f'Neuron(dim={self.dim}, activation={self.activation.__name__}, loss={self.loss.__name__})'
 
 
 class Layer:
+    """
+    Generic Layer class, a base for every specific type of layer in the neural network.
+    """
     layercounter = Counter()
 
-    def __init__(self, outputs, *, name=None, next=None):
+    def __init__(self, outputs: int, *, name: Optional[str] = None, next: Optional['Layer'] = None):
+        """
+        Initialize a layer with specified outputs, optional name, and a reference to the next layer.
+
+        :param outputs: Number of outputs this layer should produce.
+        :param name: Optional name for the layer. If not provided, a name is generated automatically.
+        :param next: The next layer in the neural network.
+        """
         Layer.layercounter[type(self)] += 1
         if name is None:
             name = f'{type(self).__name__}_{Layer.layercounter[type(self)]}'
@@ -494,31 +522,40 @@ class Layer:
         self.name = name
         self.next = next
 
-    def __repr__(self):
-        text = f'Layer(inputs={self.inputs}, outputs={self.outputs}, name={repr(self.name)})'
-        if self.next is not None:
-            text += ' + ' + repr(self.next)
-        return text
-
-    def add(self, next):
+    def add(self, next: 'Layer') -> None:
+        """
+        Add a layer to the network. If there is already a next layer, this function calls add on the next layer.
+        """
         if self.next is None:
             self.next = next
             next.set_inputs(self.outputs)
         else:
             self.next.add(next)
 
-    def set_inputs(self, inputs):
+    def set_inputs(self, inputs: int) -> None:
+        """
+        Set the number of inputs this layer should expect.
+        """
         self.inputs = inputs
 
-    def __call__(self, xs):
+    def __call__(self, xs: List[List[float]]) -> Any:
+        """
+        Abstract method to call the layer on a set of inputs.
+        """
         raise NotImplementedError('Abstract __call__ method')
 
-    def __add__(self, next):
+    def __add__(self, next: 'Layer') -> 'Layer':
+        """
+        Overload the addition operator to facilitate chaining of layers.
+        """
         result = deepcopy(self)
         result.add(deepcopy(next))
         return result
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: Any) -> 'Layer':
+        """
+        Allow indexed access to layers in a chained network.
+        """
         if index == 0 or index == self.name:
             return self
         if isinstance(index, int):
@@ -531,33 +568,79 @@ class Layer:
             return self.next[index]
         raise TypeError(f'Layer indices must be integers or strings, not {type(index).__name__}')
 
+    def __repr__(self) -> str:
+        text = f'Layer(inputs={self.inputs}, outputs={self.outputs}, name={repr(self.name)})'
+        if self.next is not None:
+            text += ' + ' + repr(self.next)
+        return text
+
 
 class InputLayer(Layer):
+    """
+    Handles the first layer operations for the neural network. This layer is responsible
+    for passing input data to subsequent layers and does not perform any transformations
+    on its own.
+    """
 
-    def __call__(self, xs, ys=None, alpha=None):
+    def __call__(self, xs: List[List[float]], ys: Optional[List[float]] = None, alpha: Optional[float] = None) -> Any:
+        """
+        Passes inputs to the next layer. Used for both forward propagation and, if parameters are provided, for backpropagation.
+
+        :param xs: Input feature vectors.
+        :param ys: Optional target outputs for training.
+        :param alpha: Learning rate, required if training is being performed.
+        :return: The output from the next layer.
+        """
         return self.next(xs, ys=ys, alpha=alpha)
 
-    def set_inputs(self, inputs):
-        raise NotImplementedError("An InputLayer itself can not receive inputs from previous layers,"
-                                  "as it is always the first layer of a network.")
+    def set_inputs(self, inputs: int) -> None:
+        """
+        Overrides the base method. InputLayer does not accept inputs from previous layers,
+        hence raises an exception if attempted.
 
-    def predict(self, xs):
+        :param inputs: Number of inputs (not used here).
+        :raises NotImplementedError: Always, as this method should not be called.
+        """
+        raise NotImplementedError(
+            "An InputLayer does not receive inputs from previous layers, as it is always the first layer in a network."
+        )
+
+    def predict(self, xs: List[List[float]]) -> List[float]:
+        """
+        Predicts outputs from the network for the provided inputs.
+
+        :param xs: List of input vectors to predict.
+        :return: Predicted values from the network.
+        """
         yhats, _, _ = self(xs)
         return yhats
 
-    def evaluate(self, xs, ys):
+    def evaluate(self, xs: List[List[float]], ys: List[float]) -> float:
+        """
+        Evaluates the model on a set of inputs and targets, returning the mean loss.
+
+        :param xs: Input feature vectors.
+        :param ys: True output values for the inputs.
+        :return: Mean loss across the input set.
+        """
         _, ls, _ = self(xs, ys)
         loss_mean = sum(ls) / len(ls)
         return loss_mean
 
-    def partial_fit(self, xs, ys, *, alpha=0.001, batch_size=None):
+    def partial_fit(self,
+                    xs: List[List[float]],
+                    ys: List[float],
+                    *,
+                    alpha: float = 0.001,
+                    batch_size: Optional[int] = None) -> float:
         """
+        Performs a training step over a batch of data using the provided learning rate.
 
-        :param xs:
-        :param ys:
-        :param alpha:
-        :param batch_size:
-        :return:
+        :param xs: List of input vectors.
+        :param ys: Corresponding target outputs.
+        :param alpha: Learning rate for updates.
+        :param batch_size: Number of examples per batch; defaults to the entire dataset if None.
+        :return: Mean loss for the batch.
         """
         input_length = len(xs)
         # determine the actual batch size
@@ -569,22 +652,31 @@ class InputLayer(Layer):
             batch_end = min(batch_start + batch_size, input_length)
             x_batch, y_batch = xs[batch_start:batch_end], ys[batch_start:batch_end]
 
-            # assuming self(x_batch, y_batch, alpha) returns model predictions, batch loss, and updates model
             _, batch_losses, _ = self(x_batch, y_batch, alpha)
             total_loss += sum(batch_losses)
 
-        mean_loss = total_loss / input_length  # calculate mean loss across all samples
+        mean_loss = total_loss / input_length
         return mean_loss
 
-    def fit(self, xs, ys, *, epochs=500, alpha=0.001, batch_size=None, validation_data=None):
+    def fit(self,
+            xs: List[List[float]],
+            ys: List[float],
+            *,
+            epochs: int = 500,
+            alpha: float = 0.001,
+            batch_size: Optional[int] = None,
+            validation_data: Optional[Tuple[List[List[float]], List[float]]] = None) \
+            -> dict[str, List[float]]:
         """
-        :param xs:
-        :param ys:
-        :param epochs:
-        :param alpha:
-        :param batch_size:
-        :param validation_data:
-        :return:
+        Train the model over a specified number of epochs, adjusting parameters using gradient descent based on the
+        loss at each step.
+        :param xs: Input feature vectors.
+        :param ys: Corresponding target values.
+        :param epochs: Number of training iterations over the dataset.
+        :param alpha: Learning rate.
+        :param batch_size: Samples per batch; defaults to full dataset if None.
+        :param validation_data: Tuple of validation features and targets, if used.
+        :return: Dictionary with training and, if applicable, validation loss history.
         """
         start_time = time.time()
         history = {'loss': []}
@@ -625,32 +717,41 @@ class InputLayer(Layer):
 
 
 class DenseLayer(Layer):
+    def __init__(self, outputs: int, *, name: Optional[str] = None, next: Optional['Layer'] = None):
+        """
+        Initializes a DenseLayer with a specified number of outputs and optional next layer connection.
 
-    def __init__(self, outputs, *, name=None, next=None):
+        :param outputs: Number of output neurons.
+        :param name: Optional custom name for the layer.
+        :param next: Reference to the next layer in the neural network.
+        """
         super().__init__(outputs, name=name, next=next)
-        self.bias = [0.0 for _ in range(self.outputs)]
-        self.weights = None
+        self.bias = [0.0 for _ in range(self.outputs)]  # Initialize biases to 0.0 for each output neuron.
+        self.weights = None  # Weights will be initialized after the number of inputs is set.
 
-    def set_inputs(self, inputs):
+    def set_inputs(self, inputs: int):
+        """
+        Set the number of inputs and initialize weights using Xavier initialization.
+
+        :param inputs: Number of inputs to this layer.
+        """
         self.inputs = inputs
-
         if self.weights is None:
-            # initialize weights using Xavier initialization for each neuron in the layer
-            limit = math.sqrt(6 / (inputs + self.outputs))
+            limit = math.sqrt(6 / (inputs + self.outputs))  # Xavier initialization limit
             self.weights = [[random.uniform(-limit, limit) for _ in range(inputs)] for _ in range(self.outputs)]
         else:
-            raise ValueError("Inputs already set.")
+            raise ValueError("Weights already initialized.")
 
-    def __call__(self, xs, ys=None, alpha=None):
+    def __call__(self, xs: List[List[float]], ys: Optional[List[float]] = None, alpha: Optional[float] = None) -> Any:
         """
+        Perform a forward pass through the dense layer and optionally a backward pass if training parameters are provided.
 
-        :param xs:
-        :param ys:
-        :param alpha:
-        :return:
+        :param xs: List of input vectors.
+        :param ys: Optional list of target vectors for backpropagation.
+        :param alpha: Optional learning rate for backpropagation.
+        :return: Activated outputs or results from training if applicable.
         """
-        activated_outputs = []  # Output values for all instances xs
-
+        activated_outputs = []
         # forward propagation
         for x in xs:
             instance_output = [self.bias[o] + sum(wi * xi for wi, xi in zip(self.weights[o], x))
@@ -682,20 +783,38 @@ class DenseLayer(Layer):
 
 class ActivationLayer(Layer):
 
-    def __init__(self, outputs, *, name=None, next=None, activation=linear):
+    def __init__(self,
+                 outputs: int,
+                 *,
+                 name: Optional[str] = None,
+                 next: Optional['Layer'] = None,
+                 activation: Callable[[float], float] = linear):
+        """
+        Initializes an Activation Layer with a specific activation function applied to each neuron's output.
+
+        :param outputs: Number of outputs this layer should produce.
+        :param name: Optional name for the layer.
+        :param next: The next layer in the network pipeline.
+        :param activation: The activation function to use on this layer's output.
+        """
         super().__init__(outputs, name=name, next=next)
         self.activation = activation
         self.activation_derivative = derivative(self.activation)
 
-    def __repr__(self):
-        text = (f"{type(self).__name__}("f"num_outputs={self.outputs},"
-                f" "f"name='{self.name}',"f" "f"activation='{self.activation.__name__}'"")")
-        if self.next is not None:
-            text += f" + {self.next!r}"
-        return text
+    def __call__(self,
+                 xs: List[List[float]],
+                 ys: Optional[List[float]] = None,
+                 alpha: Optional[float] = None) \
+            -> Any:
+        """
+        Processes inputs through the activation function and passes them to the next layer.
+        Handles forward and backward propagation if training parameters are provided.
 
-    def __call__(self, xs, ys=None, alpha=None):
-
+        :param xs: List of input vectors to the layer.
+        :param ys: Optional targets for backpropagation.
+        :param alpha: Learning rate for backpropagation.
+        :return: The output from the next layer or training results if applicable.
+        """
         activated_outputs = []
         for x in xs:
             # calculate the activated output for each input x
@@ -717,22 +836,38 @@ class ActivationLayer(Layer):
         else:
             return yhats, loss, None
 
+    def __repr__(self) -> str:
+        """String representation of the ActivationLayer including its configuration."""
+        return f"{type(self).__name__}(outputs={self.outputs}, name='{self.name}', activation='{self.activation.__name__}')"
+
 
 class LossLayer(Layer):
-    def __init__(self, loss_func=mean_squared_error, name=None):
+    def __init__(self, loss: Callable[[float, float], float] = mean_squared_error, name: Optional[str] = None):
+        """
+        Initializes a Loss Layer that computes the loss between predictions and actual target values.
+
+        :param loss: The loss function used to evaluate the output of the network.
+        :param name: Optional custom name for the layer.
+        """
         super().__init__(outputs=None, name=name)
-        self.loss_func = loss_func
+        self.loss_func = loss
 
-    def __repr__(self):
-        text = f'LossLayer(loss={self.loss_func.__name__}, name={self.name})'
-        return text
+    def add(self, next: 'Layer'):
+        """Override to prevent adding layers after a loss layer."""
+        raise NotImplementedError(
+            "It is not possible to add a layer to a LossLayer, since a network should always end with a single "
+            "LossLayer")
 
-    def add(self, next):
-        raise NotImplementedError("It is not possible to add a layer to a LossLayer,"
-                                  "since a network should always end with a single LossLayer")
+    def __call__(self, predictions: List[List[float]], ys: Optional[List[float]] = None,
+                 alpha: Optional[float] = None) -> Any:
+        """
+        Calculates loss between predictions and actual targets, handling backpropagation if training details are provided.
 
-    def __call__(self, predictions, ys=None, alpha=None):
-
+        :param predictions: The predicted outputs from the previous layer.
+        :param ys: Actual targets to compare against predictions.
+        :param alpha: Learning rate for backpropagation.
+        :return: Predictions, computed losses, and gradients if backpropagation is performed.
+        """
         yhats = predictions
         losses = None
         gradient_vector_list = None
@@ -754,19 +889,41 @@ class LossLayer(Layer):
         # outputs for further use
         return yhats, losses, gradient_vector_list
 
+    def __repr__(self) -> str:
+        """String representation of the LossLayer including its loss function."""
+        return f'LossLayer(loss={self.loss_func.__name__}, name={self.name})'
+
 
 class SoftmaxLayer(Layer):
     """
-
+    A layer that applies the softmax function to the inputs. This layer is often used in the output layer
+    of a classification network to convert logits to probabilities.
     """
 
-    def __init__(self, outputs, *, name=None, next=None):
+    def __init__(self, outputs: int, *, name: Optional[str] = None, next: Optional['Layer'] = None):
+        """
+        Initializes a SoftmaxLayer with a specified number of outputs and optional next layer connection.
+
+        :param outputs: Number of outputs this layer should produce, typically the number of classes in a classification task.
+        :param name: Optional name for the layer.
+        :param next: The next layer in the network pipeline.
+        """
         super().__init__(outputs, name=name, next=next)
 
-    def __repr__(self):
-        return f'SoftmaxLayer(outputs={self.outputs}, name={self.name})'
+    def __call__(self,
+                 xs: List[List[float]],
+                 ys: Optional[List[float]] = None,
+                 alpha: Optional[float] = None) \
+            -> Any:
+        """
+        Processes inputs through the softmax function and passes the resulting probabilities to the next layer.
+        Handles both forward propagation and, if provided, backward propagation for training.
 
-    def __call__(self, xs, ys=None, alpha=None):
+        :param xs: List of input vectors (logits) to the layer.
+        :param ys: Optional targets for backpropagation.
+        :param alpha: Learning rate, required if backpropagation is performed.
+        :return: The output from the next layer or training results if applicable.
+        """
         yhats = []  # Probability distributions for each instance
         gradients_to_h = None
 
@@ -784,3 +941,9 @@ class SoftmaxLayer(Layer):
             ]
 
         return predictions, losses, gradients_to_h
+
+    def __repr__(self) -> str:
+        """
+        Provide a string representation of the SoftmaxLayer including its configuration.
+        """
+        return f'SoftmaxLayer(outputs={self.outputs}, name={self.name})'
