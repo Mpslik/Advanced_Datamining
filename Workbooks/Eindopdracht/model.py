@@ -859,6 +859,7 @@ class LossLayer(Layer):
         """
         super().__init__(outputs=None, name=name)
         self.loss_func = loss
+        self.loss_derivative = derivative(self.loss_func)
 
     def add(self, next: 'Layer'):
         """Override to prevent adding layers after a loss layer."""
@@ -890,7 +891,7 @@ class LossLayer(Layer):
             # calculate gradients for training
             if alpha:
                 gradient_vector_list = [
-                    [derivative(self.loss_func)(yhat_i, y_i) for yhat_i, y_i in zip(yhat, y)]
+                    [self.loss_derivative(yhat_i, y_i) for yhat_i, y_i in zip(yhat, y)]
                     for yhat, y in zip(yhats, ys)
                 ]
 
