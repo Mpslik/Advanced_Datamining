@@ -32,6 +32,11 @@ def sign(x):
 
 
 def tanh(x):
+    """
+    Tangus hyperbolic activation function
+    :param x:
+    :return:
+    """
     return math.tanh(x)
 
 
@@ -109,7 +114,6 @@ def softmax(x):
 def hinge(y_true, y_phred):
     """
     Hinge error function
-    r
     :param y_true:
     :param y_phred:
     :return:
