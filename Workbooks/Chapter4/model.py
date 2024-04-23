@@ -136,6 +136,7 @@ def mean_absolute_error(y_true, y_pred):
     """
     return abs(y_pred - y_true)
 
+
 def binary_crossentropy(y_pred, y_true, epsilon=0.0001):
     """
     calculates the binary cross entropy loss.
@@ -144,7 +145,10 @@ def binary_crossentropy(y_pred, y_true, epsilon=0.0001):
     :param epsilon:
     :return:
     """
-    return -y_true * pseudo_log(y_pred, epsilon) - (1 - y_true) * pseudo_log(1 - y_pred, epsilon)
+    return -y_true * pseudo_log(y_pred, epsilon) - (1 - y_true) * pseudo_log(
+        1 - y_pred, epsilon
+    )
+
 
 def categorical_crossentropy(y_pred, y_true, epsilon=0.0001):
     """
@@ -155,6 +159,7 @@ def categorical_crossentropy(y_pred, y_true, epsilon=0.0001):
     :return:
     """
     return -y_true * pseudo_log(y_pred, epsilon)
+
 
 def pseudo_log(x, epsilon=0.001):
     """
@@ -170,6 +175,7 @@ def pseudo_log(x, epsilon=0.001):
 
 # derivative wrapper
 
+
 def derivative(function, delta=0.001):
     """
     Calculates the derivative of a function for the given value.
@@ -183,8 +189,8 @@ def derivative(function, delta=0.001):
         return (function(x + delta, *args) - function(x - delta, *args)) / (2 * delta)
 
     # Give it a distinct name
-    wrapper_derivative.__name__ = function.__name__ + '’'
-    wrapper_derivative.__qualname__ = function.__qualname__ + '’'
+    wrapper_derivative.__name__ = function.__name__ + "’"
+    wrapper_derivative.__qualname__ = function.__qualname__ + "’"
     # Return the wrapper function
     return wrapper_derivative
 
@@ -199,9 +205,7 @@ class Perceptron:
     """
 
     def __init__(self, dim, bias=0, weights=None):
-        """
-
-        """
+        """ """
         self.dim = dim
         self.bias = bias
         if weights is None:
@@ -209,7 +213,9 @@ class Perceptron:
             self.weights = [0] * dim
         else:
             # aantal weights gelijk gesteld aan de dimensie
-            assert len(weights) == dim, "Length of weights should match the dimensionality"
+            assert (
+                len(weights) == dim
+            ), "Length of weights should match the dimensionality"
             self.weights = weights
 
     def predict(self, xs):
@@ -225,7 +231,6 @@ class Perceptron:
         return predictions
 
     def predict_instance(self, instance):
-
         """
         predicts the given instance with the stored weights and bias
         :param instance: a single instance array
@@ -247,9 +252,9 @@ class Perceptron:
         for x, y in zip(xs, ys):
             prediction = self.predict_instance(x)
             error = y - prediction
-            self.bias += - error
+            self.bias += -error
             for i in range(len(x)):
-                self.weights[i] += - error * x[i]
+                self.weights[i] += -error * x[i]
 
     def fit(self, xs, ys, *, epochs=0):
         """
@@ -276,7 +281,7 @@ class Perceptron:
                 break  # stop als het opgeven max aantal epochs behaald is
 
     def __repr__(self):
-        text = f'Perceptron(dim={self.dim}, bias={self.bias}, weights={self.weights})'
+        text = f"Perceptron(dim={self.dim}, bias={self.bias}, weights={self.weights})"
         return text
 
 
@@ -294,7 +299,9 @@ class LinearRegression:
             self.weights = [0] * dim
         else:
             # aantal weights gelijk gesteld aan de dimensie
-            assert len(weights) == dim, "Length of weights should match the dimensionality"
+            assert (
+                len(weights) == dim
+            ), "Length of weights should match the dimensionality"
             self.weights = weights
 
     def predict(self, xs):
@@ -310,7 +317,6 @@ class LinearRegression:
         return predictions
 
     def predict_instance(self, instance):
-
         """
         predicts the given instance with the stored weights and bias
         :param instance: a single instance array
@@ -352,7 +358,7 @@ class LinearRegression:
                 break  # stop als het opgeven max aantal epochs behaald is
 
     def __repr__(self):
-        text = f'LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})'
+        text = f"LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})"
         return text
 
 
@@ -365,8 +371,12 @@ class Neuron:
         self.loss = loss
 
     def predict(self, xs):
-
-        return [self.activation(self.bias + sum(w * x for w, x in zip(self.weights, instance))) for instance in xs]
+        return [
+            self.activation(
+                self.bias + sum(w * x for w, x in zip(self.weights, instance))
+            )
+            for instance in xs
+        ]
 
     def partial_fit(self, xs, ys, alpha=0.01):
         for x, y in zip(xs, ys):
@@ -401,7 +411,7 @@ class Neuron:
                 break
 
     def __repr__(self):
-        return f'Neuron(dim={self.dim}, activation={self.activation.__name__}, loss={self.loss.__name__})'
+        return f"Neuron(dim={self.dim}, activation={self.activation.__name__}, loss={self.loss.__name__})"
 
 
 class Layer:
@@ -410,16 +420,16 @@ class Layer:
     def __init__(self, outputs, *, name=None, next=None):
         Layer.layercounter[type(self)] += 1
         if name is None:
-            name = f'{type(self).__name__}_{Layer.layercounter[type(self)]}'
+            name = f"{type(self).__name__}_{Layer.layercounter[type(self)]}"
         self.inputs = 0
         self.outputs = outputs
         self.name = name
         self.next = next
 
     def __repr__(self):
-        text = f'Layer(inputs={self.inputs}, outputs={self.outputs}, name={repr(self.name)})'
+        text = f"Layer(inputs={self.inputs}, outputs={self.outputs}, name={repr(self.name)})"
         if self.next is not None:
-            text += ' + ' + repr(self.next)
+            text += " + " + repr(self.next)
         return text
 
     def add(self, next):
@@ -433,7 +443,7 @@ class Layer:
         self.inputs = inputs
 
     def __call__(self, xs):
-        raise NotImplementedError('Abstract __call__ method')
+        raise NotImplementedError("Abstract __call__ method")
 
     def __add__(self, next):
         result = deepcopy(self)
@@ -445,23 +455,26 @@ class Layer:
             return self
         if isinstance(index, int):
             if self.next is None:
-                raise IndexError('Layer index out of range')
+                raise IndexError("Layer index out of range")
             return self.next[index - 1]
         if isinstance(index, str):
             if self.next is None:
                 raise KeyError(index)
             return self.next[index]
-        raise TypeError(f'Layer indices must be integers or strings, not {type(index).__name__}')
+        raise TypeError(
+            f"Layer indices must be integers or strings, not {type(index).__name__}"
+        )
 
 
 class InputLayer(Layer):
-
     def __call__(self, xs, ys=None, alpha=None):
         return self.next(xs, ys=ys, alpha=alpha)
 
     def set_inputs(self, inputs):
-        raise NotImplementedError("An InputLayer itself can not receive inputs from previous layers,"
-                                  "as it is always the first layer of a network.")
+        raise NotImplementedError(
+            "An InputLayer itself can not receive inputs from previous layers,"
+            "as it is always the first layer of a network."
+        )
 
     def predict(self, xs):
         yhats, _, _ = self(xs)
@@ -480,14 +493,13 @@ class InputLayer(Layer):
             self.partial_fit(xs, ys, alpha=alpha)
 
     def __repr__(self):
-        text = f'InputLayer(outputs={self.outputs}, name={repr(self.name)})'
+        text = f"InputLayer(outputs={self.outputs}, name={repr(self.name)})"
         if self.next is not None:
-            text += ' + ' + repr(self.next)
+            text += " + " + repr(self.next)
         return text
 
 
 class DenseLayer(Layer):
-
     def __init__(self, outputs, *, name=None, next=None):
         super().__init__(outputs, name=name, next=next)
         self.bias = [0.0 for _ in range(self.outputs)]
@@ -499,7 +511,10 @@ class DenseLayer(Layer):
         if self.weights is None:
             # initialize weights using Xavier initialization for each neuron in the layer
             limit = math.sqrt(6 / (inputs + self.outputs))
-            self.weights = [[random.uniform(-limit, limit) for _ in range(inputs)] for _ in range(self.outputs)]
+            self.weights = [
+                [random.uniform(-limit, limit) for _ in range(inputs)]
+                for _ in range(self.outputs)
+            ]
         else:
             raise ValueError("Inputs already set.")
 
@@ -515,20 +530,23 @@ class DenseLayer(Layer):
 
         # forward propagation
         for x in xs:
-            instance_output = [self.bias[o] + sum(wi * xi for wi, xi in zip(self.weights[o], x))
-                               for o in range(self.outputs)]  # Output value for one instance x
+            instance_output = [
+                self.bias[o] + sum(wi * xi for wi, xi in zip(self.weights[o], x))
+                for o in range(self.outputs)
+            ]  # Output value for one instance x
             activated_outputs.append(instance_output)
 
         # check if training or not
         yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
         if ys is not None and alpha is not None:
-
             gradient_x_list = []
 
             # backwards propogation updating  biases and weights
             for x, gradient_x in zip(xs, gradients):
-                instance_gradient = [sum(self.weights[o][i] * gradient_x[o] for o in range(self.outputs)) for i in
-                                     range(self.inputs)]
+                instance_gradient = [
+                    sum(self.weights[o][i] * gradient_x[o] for o in range(self.outputs))
+                    for i in range(self.inputs)
+                ]
                 gradient_x_list.append(instance_gradient)
 
                 for o in range(self.outputs):
@@ -543,21 +561,26 @@ class DenseLayer(Layer):
 
 
 class ActivationLayer(Layer):
-
     def __init__(self, outputs, *, name=None, next=None, activation=linear):
         super().__init__(outputs, name=name, next=next)
         self.activation = activation
         self.activation_derivative = derivative(self.activation)
 
     def __repr__(self):
-        text = (f"{type(self).__name__}("f"num_outputs={self.outputs},"
-                f" "f"name='{self.name}',"f" "f"activation='{self.activation.__name__}'"")")
+        text = (
+            f"{type(self).__name__}("
+            f"num_outputs={self.outputs},"
+            f" "
+            f"name='{self.name}',"
+            f" "
+            f"activation='{self.activation.__name__}'"
+            ")"
+        )
         if self.next is not None:
             text += f" + {self.next!r}"
         return text
 
     def __call__(self, xs, ys=None, alpha=None):
-
         activated_outputs = []
         for x in xs:
             # calculate the activated output for each input x
@@ -567,12 +590,13 @@ class ActivationLayer(Layer):
         yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
         # if training check do backwards propogation
         if ys is not None and alpha is not None:
-
             # calculate the gradients from the loss to the pre-activation value
             gradients_to_pre_activations = []
             for x, gradient in zip(xs, gradients):
-                gradient_to_pre_activation = [self.activation_derivative(x[o]) * gradient[o] for o in
-                                              range(self.outputs)]
+                gradient_to_pre_activation = [
+                    self.activation_derivative(x[o]) * gradient[o]
+                    for o in range(self.outputs)
+                ]
                 gradients_to_pre_activations.append(gradient_to_pre_activation)
 
             return yhats, loss, gradients_to_pre_activations
@@ -586,15 +610,16 @@ class LossLayer(Layer):
         self.loss = loss
 
     def __repr__(self):
-        text = f'LossLayer(loss={self.loss.__name__}, name={self.name})'
+        text = f"LossLayer(loss={self.loss.__name__}, name={self.name})"
         return text
 
     def add(self, next):
-        raise NotImplementedError("It is not possible to add a layer to a LossLayer,"
-                                  "since a network should always end with a single LossLayer")
+        raise NotImplementedError(
+            "It is not possible to add a layer to a LossLayer,"
+            "since a network should always end with a single LossLayer"
+        )
 
     def __call__(self, predictions, ys=None, alpha=None):
-
         yhats = predictions
         losses = None
         gradient_vector_list = None
@@ -618,14 +643,13 @@ class LossLayer(Layer):
 
 
 class SoftmaxLayer(Layer):
-    """
+    """ """
 
-    """
     def __init__(self, outputs, *, name=None, next=None):
         super().__init__(outputs, name=name, next=next)
 
     def __repr__(self):
-        return f'SoftmaxLayer(outputs={self.outputs}, name={self.name})'
+        return f"SoftmaxLayer(outputs={self.outputs}, name={self.name})"
 
     def __call__(self, xs, ys=None, alpha=None):
         yhats = []  # Probability distributions for each instance
@@ -639,9 +663,18 @@ class SoftmaxLayer(Layer):
 
         if alpha and gradients_from_loss is not None:
             gradients_to_h = [
-                [sum(gradients_from_loss[o] * prediction[o] * ((i == o) - prediction[i]) for o in range(self.outputs))
-                 for i in range(self.inputs)] for prediction, gradients_from_loss in
-                zip(predictions, gradients_from_loss)
+                [
+                    sum(
+                        gradients_from_loss[o]
+                        * prediction[o]
+                        * ((i == o) - prediction[i])
+                        for o in range(self.outputs)
+                    )
+                    for i in range(self.inputs)
+                ]
+                for prediction, gradients_from_loss in zip(
+                    predictions, gradients_from_loss
+                )
             ]
 
         return predictions, losses, gradients_to_h

@@ -13,6 +13,7 @@ from sklearn import metrics
 
 # FUNCTIONS:
 
+
 def linear(outcome, *, num=100, dim=2, noise=0.0, seed=None):
     """Generate a linear dataset with attributes and outcomes.
 
@@ -30,21 +31,21 @@ def linear(outcome, *, num=100, dim=2, noise=0.0, seed=None):
     ys       -- values of the outcomes
     """
     # Check that only one outcome type is specified
-    if outcome.lower() != 'nominal' and outcome.lower() != 'numeric':
-        raise ValueError('Invalid outcome type specified!')
+    if outcome.lower() != "nominal" and outcome.lower() != "numeric":
+        raise ValueError("Invalid outcome type specified!")
     # Seed the random number generator
     random.seed(seed)
     # Generate bias and weights
     bias = copysign(1.0, random.gauss(0.0, 1.0))
     weights = [random.gauss(0.0, 1.0) for d in range(dim)]
-    norm = sqrt(sum(wi ** 2 for wi in weights))
+    norm = sqrt(sum(wi**2 for wi in weights))
     for i in range(len(weights)):
         weights[i] /= norm
     # Generate attribute data
     xs = [[random.gauss(0.0, 2.0) for d in range(dim)] for n in range(num)]
     # Generate outcomes
     ys = [bias + sum(wi * xi for wi, xi in zip(weights, x)) for x in xs]
-    if outcome.lower() == 'nominal':
+    if outcome.lower() == "nominal":
         for i in range(len(ys)):
             ys[i] = copysign(1.0, ys[i])
     # Add noise to the attributes
@@ -72,19 +73,19 @@ def fractal(classes, *, num=200, seed=None):
     # Seed the random number generator
     random.seed(seed)
     # Generate attribute data
-    rs = [sqrt(0.75*random.random()) for n in range(num)]
-    fs = [2.0*pi*random.random() for n in range(num)]
-    xs = [[r*cos(f), r*sin(f)] for r, f in zip(rs, fs)]
+    rs = [sqrt(0.75 * random.random()) for n in range(num)]
+    fs = [2.0 * pi * random.random() for n in range(num)]
+    xs = [[r * cos(f), r * sin(f)] for r, f in zip(rs, fs)]
     # Initialize outcomes
     ys = [[0.0 for c in range(classes)] for n in range(num)]
     # Perform Newton's method
     for n in range(num):
         z_old = -complex(xs[n][0], xs[n][1])
-        z_new = (z_old*(classes-1)-z_old**(1-classes))/classes
-        while abs(z_new-z_old) > 1e-9:
+        z_new = (z_old * (classes - 1) - z_old ** (1 - classes)) / classes
+        while abs(z_new - z_old) > 1e-9:
             z_old = z_new
-            z_new = (z_old*(classes-1)-z_old**(1-classes))/classes
-        c = int(((phase(-z_new)/pi+1.0)*classes-1.0)/2.0)
+            z_new = (z_old * (classes - 1) - z_old ** (1 - classes)) / classes
+        c = int(((phase(-z_new) / pi + 1.0) * classes - 1.0) / 2.0)
         ys[n][c] = 1.0
     # Return values
     return xs, ys
@@ -107,9 +108,9 @@ def concentric(*, num=200, dim=2, noise=0.0, density=2.5, seed=None):
     # Seed the random number generator
     random.seed(seed)
     # Generate attribute data
-    xs = [[random.random()*3.0 - 1.5 for d in range(dim)] for n in range(num)]
+    xs = [[random.random() * 3.0 - 1.5 for d in range(dim)] for n in range(num)]
     # Generate outcomes
-    ys = [[sin(density * (x[0]*x[0] + x[1] * x[1]))] for x in xs]
+    ys = [[sin(density * (x[0] * x[0] + x[1] * x[1]))] for x in xs]
     # Add noise to the attributes
     for n in range(num):
         for d in range(dim):
@@ -135,11 +136,11 @@ def sign_mnist_mini(filename, num=33600, seed=None):
     # Initialise
     xs = list()
     ys = list()
-    y = [0]*23 + [1]
+    y = [0] * 23 + [1]
     # Pick the digits
-    with open(filename, 'rb') as datafile:
-        for n in random.sample(range(1400), (num+23) // 24):
-            datafile.seek(n*72*24)
+    with open(filename, "rb") as datafile:
+        for n in random.sample(range(1400), (num + 23) // 24):
+            datafile.seek(n * 72 * 24)
             for m in range(24):
                 x = list()
                 for byte in datafile.read(72):
@@ -176,12 +177,21 @@ def scatter(xs, ys, *, model=None):
     xgrid = [i / 64.0 * xlimit for i in range(-64, 65)]
     # Determine the background
     if isinstance(xs, np.ndarray):
-        back = model.predict(np.array([[x1, x2] for x2 in xgrid for x1 in xgrid])).reshape((len(xgrid), len(xgrid), -1)).tolist()
-    elif hasattr(model, 'predict_proba'):
-        back = [[[1.0 - 2.0 * model.predict_proba([[x1, x2]])[0][0]] for x1 in xgrid] for x2 in xgrid]
-    elif hasattr(model, 'decision_function'):
-        back = [[model.decision_function([[x1, x2]])[0] for x1 in xgrid] for x2 in xgrid]
-    elif hasattr(model, 'predict'):
+        back = (
+            model.predict(np.array([[x1, x2] for x2 in xgrid for x1 in xgrid]))
+            .reshape((len(xgrid), len(xgrid), -1))
+            .tolist()
+        )
+    elif hasattr(model, "predict_proba"):
+        back = [
+            [[1.0 - 2.0 * model.predict_proba([[x1, x2]])[0][0]] for x1 in xgrid]
+            for x2 in xgrid
+        ]
+    elif hasattr(model, "decision_function"):
+        back = [
+            [model.decision_function([[x1, x2]])[0] for x1 in xgrid] for x2 in xgrid
+        ]
+    elif hasattr(model, "predict"):
         back = [[model.predict([[x1, x2]])[0] for x1 in xgrid] for x2 in xgrid]
     else:
         back = None
@@ -195,28 +205,52 @@ def scatter(xs, ys, *, model=None):
         yns = [yi[n] for yi in ys]
         ylimit = ceil(max(-min(yns), max(yns)))
         # Plot the data
-        data = ax.scatter(x1s, x2s, c=yns, edgecolors='w', cmap=plt.cm.RdYlBu, vmin=-ylimit, vmax=ylimit)
+        data = ax.scatter(
+            x1s,
+            x2s,
+            c=yns,
+            edgecolors="w",
+            cmap=plt.cm.RdYlBu,
+            vmin=-ylimit,
+            vmax=ylimit,
+        )
         # Background colors denoting the model predictions with dashed line at contour zero
         if back is None:
-            ax.set_facecolor('#F8F8F8')
+            ax.set_facecolor("#F8F8F8")
         else:
             backn = [[back_ij[n] for back_ij in back_i] for back_i in back]
-            ax.imshow(backn, origin='lower', extent=(-xlimit, xlimit, -xlimit, xlimit), vmin=-ylimit, vmax=ylimit, interpolation='bilinear', cmap=plt.cm.RdYlBu)
-            with warnings.catch_warnings():   # Suppress warning that zero-contour may be absent
-                warnings.simplefilter('ignore')
-                ax.contour(xgrid, xgrid, backn, levels=[0.0], colors='k', linestyles='--', linewidths=1.0)
+            ax.imshow(
+                backn,
+                origin="lower",
+                extent=(-xlimit, xlimit, -xlimit, xlimit),
+                vmin=-ylimit,
+                vmax=ylimit,
+                interpolation="bilinear",
+                cmap=plt.cm.RdYlBu,
+            )
+            with warnings.catch_warnings():  # Suppress warning that zero-contour may be absent
+                warnings.simplefilter("ignore")
+                ax.contour(
+                    xgrid,
+                    xgrid,
+                    backn,
+                    levels=[0.0],
+                    colors="k",
+                    linestyles="--",
+                    linewidths=1.0,
+                )
         # Finish the layout
-        ax.set_aspect('equal', 'box')
+        ax.set_aspect("equal", "box")
         ax.axis([-xlimit, xlimit, -xlimit, xlimit])
-        ax.grid(True, color='k', linestyle=':', linewidth=0.5)
-        ax.axhline(y=0, color='k', linestyle='-', linewidth=1.0)
-        ax.axvline(x=0, color='k', linestyle='-', linewidth=1.0)
+        ax.grid(True, color="k", linestyle=":", linewidth=0.5)
+        ax.axhline(y=0, color="k", linestyle="-", linewidth=1.0)
+        ax.axvline(x=0, color="k", linestyle="-", linewidth=1.0)
         ax.set_axisbelow(True)
-        ax.set_xlabel(r'$x_1$')
-        ax.set_ylabel(r'$x_2$')
+        ax.set_xlabel(r"$x_1$")
+        ax.set_ylabel(r"$x_2$")
         cbar = plt.colorbar(data, ax=ax).ax
-        cbar.axhline(y=0.0, color='k', linestyle='--', linewidth=1.0)
-        cbar.set_title(r'$y$' if axes == 1 else r'$y_{}$'.format(n+1))
+        cbar.axhline(y=0.0, color="k", linestyle="--", linewidth=1.0)
+        cbar.set_title(r"$y$" if axes == 1 else r"$y_{}$".format(n + 1))
     plt.show()
 
 
@@ -240,21 +274,23 @@ def graph(funcs, *args, xlim=(-3.0, 3.0)):
     xs = [xlim[0] + i * (xlim[1] - xlim[0]) / 256.0 for i in range(257)]
     ymin = -1.0
     ymax = +1.0
-    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    plt.subplot(1, 1, 1, facecolor='#F8F8F8')
+    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+    plt.subplot(1, 1, 1, facecolor="#F8F8F8")
     for n, func in enumerate(funcs):
         ys = [func(x, *args) for x in xs]
         ymin = min(ymin, floor(min(ys)))
         ymax = max(ymax, ceil(max(ys)))
-        plt.plot(xs, ys, color=colors[n % len(colors)], linewidth=3.0, label=func.__name__)
+        plt.plot(
+            xs, ys, color=colors[n % len(colors)], linewidth=3.0, label=func.__name__
+        )
     # Finish the layout
     plt.axis([xlim[0], xlim[1], ymin, ymax])
     plt.legend()
-    plt.grid(True, color='k', linestyle=':', linewidth=0.5)
-    plt.axhline(y=0, color='k', linestyle='-', linewidth=1.0)
-    plt.axvline(x=0, color='k', linestyle='-', linewidth=1.0)
-    plt.xlabel(r'$x$')
-    plt.ylabel(r'$f(x)$')
+    plt.grid(True, color="k", linestyle=":", linewidth=0.5)
+    plt.axhline(y=0, color="k", linestyle="-", linewidth=1.0)
+    plt.axvline(x=0, color="k", linestyle="-", linewidth=1.0)
+    plt.xlabel(r"$x$")
+    plt.ylabel(r"$f(x)$")
     plt.show()
 
 
@@ -269,20 +305,30 @@ def curve(series):
     """
     # Plot the curves and keep track of their x-range
     xmax = 1
-    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     for n, label in enumerate(sorted(series.keys())):
         data = series[label]
         xmax = max(xmax, len(data))
-        plt.plot([x + 0.5 for x in range(len(data))], data, color=colors[n % len(colors)], linewidth=3.0, label=label)
-        plt.axhline(y=min(data), color=colors[n % len(colors)], linewidth=1.0, linestyle='--')
-        plt.axhline(y=max(data), color=colors[n % len(colors)], linewidth=1.0, linestyle='--')
+        plt.plot(
+            [x + 0.5 for x in range(len(data))],
+            data,
+            color=colors[n % len(colors)],
+            linewidth=3.0,
+            label=label,
+        )
+        plt.axhline(
+            y=min(data), color=colors[n % len(colors)], linewidth=1.0, linestyle="--"
+        )
+        plt.axhline(
+            y=max(data), color=colors[n % len(colors)], linewidth=1.0, linestyle="--"
+        )
     # Finish the layout
     plt.xlim([0, xmax])
     plt.legend()
-    plt.grid(True, color='k', linestyle=':', linewidth=0.5)
-    plt.axhline(y=0, color='k', linestyle='-', linewidth=1.0)
-    plt.xlabel(r'$n$')
-    plt.ylabel(r'$y$')
+    plt.grid(True, color="k", linestyle=":", linewidth=0.5)
+    plt.axhline(y=0, color="k", linestyle="-", linewidth=1.0)
+    plt.xlabel(r"$n$")
+    plt.ylabel(r"$y$")
     plt.show()
 
 
@@ -297,6 +343,7 @@ def gestures(xs, ys, model=None):
     Return values:
     None
     """
+
     # Define the argmax helper function
     def argmax(ls):
         m = -1.0
@@ -306,20 +353,24 @@ def gestures(xs, ys, model=None):
                 m = l
                 result = n
         return result
+
     # Plot the gestures
-    labels = 'ABCDEFGHIKLMNOPQRSTUVWXY'
+    labels = "ABCDEFGHIKLMNOPQRSTUVWXY"
     axes = len(xs)
-    fig, axs = plt.subplots(1, axes, figsize=(0.8*axes, 0.8), squeeze=False)
+    fig, axs = plt.subplots(1, axes, figsize=(0.8 * axes, 0.8), squeeze=False)
     for n, ax in enumerate(axs[0]):
-        paint = [[xs[n][xi*12+yi] for xi in range(12)] for yi in range(12)]
-        ax.imshow(paint, extent=(0.0, 1.0, 0.0, 1.0), vmin=0.0, vmax=1.0, cmap=plt.cm.binary)
-        ax.set_aspect('equal', 'box')
-        ax.axis('off')
+        paint = [[xs[n][xi * 12 + yi] for xi in range(12)] for yi in range(12)]
+        ax.imshow(
+            paint, extent=(0.0, 1.0, 0.0, 1.0), vmin=0.0, vmax=1.0, cmap=plt.cm.binary
+        )
+        ax.set_aspect("equal", "box")
+        ax.axis("off")
         t = labels[argmax(ys[n])]
         if model is not None:
-            t += '→' + labels[argmax(model.predict([xs[n]])[0])]
+            t += "→" + labels[argmax(model.predict([xs[n]])[0])]
         ax.set_title(t)
     plt.show()
+
 
 def confusion(xs, ys, model):
     """Shows 24x24 confusion matrix.
@@ -332,6 +383,7 @@ def confusion(xs, ys, model):
     Return values:
     None
     """
+
     # Define the argmax helper function
     def argmax(ls):
         m = -1.0
@@ -341,17 +393,22 @@ def confusion(xs, ys, model):
                 m = l
                 result = n
         return result
+
     # Compute the confusion matrix
     yhats = model.predict(xs)
-    matrix = metrics.confusion_matrix([argmax(y) for y in ys], [argmax(yhat) for yhat in yhats], labels=list(range(24)))
+    matrix = metrics.confusion_matrix(
+        [argmax(y) for y in ys],
+        [argmax(yhat) for yhat in yhats],
+        labels=list(range(24)),
+    )
     accuracy = sum(matrix[i][i] for i in range(24)) / len(xs)
     # Plot the confusion matrix
-    plt.imshow(matrix, norm=LogNorm(), cmap='Blues', origin='lower')
+    plt.imshow(matrix, norm=LogNorm(), cmap="Blues", origin="lower")
     plt.grid(True)
-    plt.title(f'Accuracy = {accuracy*100.0:.1f}%')
-    plt.xlabel('$\hat{y}$')
-    plt.ylabel('$y$')
-    plt.xticks(range(24), list('ABCDEFGHIKLMNOPQRSTUVWXY'))
-    plt.yticks(range(24), list('ABCDEFGHIKLMNOPQRSTUVWXY'))
+    plt.title(f"Accuracy = {accuracy*100.0:.1f}%")
+    plt.xlabel("$\hat{y}$")
+    plt.ylabel("$y$")
+    plt.xticks(range(24), list("ABCDEFGHIKLMNOPQRSTUVWXY"))
+    plt.yticks(range(24), list("ABCDEFGHIKLMNOPQRSTUVWXY"))
     plt.colorbar()
     plt.show()

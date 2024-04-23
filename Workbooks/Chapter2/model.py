@@ -88,9 +88,7 @@ class Perceptron:
     """
 
     def __init__(self, dim, bias=0, weights=None, learning_rate=0.01):
-        """
-
-        """
+        """ """
         self.dim = dim
         self.bias = bias
         self.learning_rate = learning_rate
@@ -99,7 +97,9 @@ class Perceptron:
             self.weights = [0] * dim
         else:
             # aantal weights gelijk gesteld aan de dimensie
-            assert len(weights) == dim, "Length of weights should match the dimensionality"
+            assert (
+                len(weights) == dim
+            ), "Length of weights should match the dimensionality"
             self.weights = weights
 
     def predict(self, xs):
@@ -115,7 +115,6 @@ class Perceptron:
         return predictions
 
     def predict_instance(self, instance):
-
         """
         predicts the given instance with the stored weights and bias
         :param instance: a single instance array
@@ -137,7 +136,7 @@ class Perceptron:
         """
         for x, y in zip(xs, ys):
             prediction = self.predict_instance(x)
-            self.bias -= (prediction - y)
+            self.bias -= prediction - y
             for i in range(len(x)):
                 self.weights[i] -= (prediction - y) * x[i]
 
@@ -166,7 +165,7 @@ class Perceptron:
                 break  # stop als het opgeven max aantal epochs behaald is
 
     def __repr__(self):
-        text = f'Perceptron(dim={self.dim}, bias={self.bias}, weights={self.weights})'
+        text = f"Perceptron(dim={self.dim}, bias={self.bias}, weights={self.weights})"
         return text
 
 
@@ -184,7 +183,9 @@ class LinearRegression:
             self.weights = [0] * dim
         else:
             # aantal weights gelijk gesteld aan de dimensie
-            assert len(weights) == dim, "Length of weights should match the dimensionality"
+            assert (
+                len(weights) == dim
+            ), "Length of weights should match the dimensionality"
             self.weights = weights
 
     def predict(self, xs):
@@ -200,7 +201,6 @@ class LinearRegression:
         return predictions
 
     def predict_instance(self, instance):
-
         """
         predicts the given instance with the stored weights and bias
         :param instance: a single instance array
@@ -213,13 +213,13 @@ class LinearRegression:
 
     def partial_fit(self, xs, ys):
         """
-                Runs a partial fit of the model on the data
-                1 single run
-                :param self:
-                :param xs: List of instances (data)
-                :param ys: List of target / values
-                :return:
-                """
+        Runs a partial fit of the model on the data
+        1 single run
+        :param self:
+        :param xs: List of instances (data)
+        :param ys: List of target / values
+        :return:
+        """
         for x, y in zip(xs, ys):
             prediction = self.predict_instance(x)
             self.bias -= self.learning_rate * (prediction - y)
@@ -242,7 +242,7 @@ class LinearRegression:
                 break  # stop als het opgeven max aantal epochs behaald is
 
     def __repr__(self):
-        text = f'LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})'
+        text = f"LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})"
         return text
 
 
@@ -255,8 +255,12 @@ class Neuron:
         self.loss = loss
 
     def predict(self, xs):
-
-        return [self.activation(self.bias + sum(w * x for w, x in zip(self.weights, instance))) for instance in xs]
+        return [
+            self.activation(
+                self.bias + sum(w * x for w, x in zip(self.weights, instance))
+            )
+            for instance in xs
+        ]
 
     def partial_fit(self, xs, ys, alpha=0.001):
         for x, y in zip(xs, ys):
@@ -266,7 +270,10 @@ class Neuron:
             activation_gradient = derivative(self.activation)(prediction)
 
             self.bias -= alpha * loss_gradient * activation_gradient
-            self.weights = [w - alpha * loss_gradient * activation_gradient * xi for w, xi in zip(self.weights, x)]
+            self.weights = [
+                w - alpha * loss_gradient * activation_gradient * xi
+                for w, xi in zip(self.weights, x)
+            ]
 
     def fit(self, xs, ys, epochs=0):
         prev_weights = self.weights.copy()
@@ -284,4 +291,4 @@ class Neuron:
                 break
 
     def __repr__(self):
-        return f'Neuron(dim={self.dim}, activation={self.activation.__name__}, loss={self.loss.__name__})'
+        return f"Neuron(dim={self.dim}, activation={self.activation.__name__}, loss={self.loss.__name__})"

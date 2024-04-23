@@ -18,7 +18,9 @@ class Perceptron:
             self.weights = [0] * dim
         else:
             # aantal weights gelijk gesteld aan de dimensie
-            assert len(weights) == dim, "Length of weights should match the dimensionality"
+            assert (
+                len(weights) == dim
+            ), "Length of weights should match the dimensionality"
             self.weights = weights
 
     def predict(self, xs):
@@ -53,7 +55,7 @@ class Perceptron:
         """
         for x, y in zip(xs, ys):
             prediction = self.predict_instance(x)
-            self.bias -= (prediction - y)
+            self.bias -= prediction - y
             for i in range(len(x)):
                 self.weights[i] -= (prediction - y) * x[i]
 
@@ -81,7 +83,7 @@ class Perceptron:
                 break  # stop als het opgeven max aantal epochs behaald is
 
     def __repr__(self):
-        text = f'Perceptron(dim={self.dim}, bias={self.bias}, weights={self.weights})'
+        text = f"Perceptron(dim={self.dim}, bias={self.bias}, weights={self.weights})"
         return text
 
 
@@ -95,7 +97,9 @@ class LinearRegression:
             self.weights = [0] * dim
         else:
             # aantal weights gelijk gesteld aan de dimensie
-            assert len(weights) == dim, "Length of weights should match the dimensionality"
+            assert (
+                len(weights) == dim
+            ), "Length of weights should match the dimensionality"
             self.weights = weights
 
     def predict(self, xs):
@@ -134,5 +138,5 @@ class LinearRegression:
                 break  # stop als het opgeven max aantal epochs behaald is
 
     def __repr__(self):
-        text = f'LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})'
+        text = f"LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})"
         return text
