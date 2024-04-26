@@ -109,9 +109,8 @@ def nipuna(x: float, beta: float = 1.0) -> float:
     :return: output of the NIPUNA function
     """
     if -beta * x > 700:
-        exp_term = 0.0
-    else:
-        exp_term = math.exp(-beta * x)
+        return 0
+    exp_term = math.exp(-beta * x)
     gx = x / (1 + exp_term)
     return max(gx, x)
 
@@ -161,7 +160,7 @@ def binary_crossentropy(y_pred: float, y_true: float, epsilon: float = 0.0001) -
 
 
 def categorical_crossentropy(
-    y_pred: float, y_true: float, epsilon: float = 0.0001
+        y_pred: float, y_true: float, epsilon: float = 0.0001
 ) -> float:
     """
     calculates the categorical cross entropy loss.
@@ -288,11 +287,10 @@ class ProgressBar:
 
 class Perceptron:
     def __init__(
-        self,
-        dim: int,
-        bias: float = 0,
-        weights: [list[float]] = None,
-        learning_rate: float = 0.01,
+            self,
+            dim: int,
+            bias: float = 0,
+            weights: [list[float]] = None,
     ):
         """
         Initialize the Perceptron with a specified dimension, bias, initial weights, and learning rate.
@@ -304,12 +302,11 @@ class Perceptron:
         """
         self.dim = dim
         self.bias = bias
-        self.learning_rate = learning_rate
         if weights is None:
             self.weights = [0.0] * dim
         else:
             assert (
-                len(weights) == dim
+                    len(weights) == dim
             ), "Length of weights should match the dimensionality"
             self.weights = weights
 
@@ -345,12 +342,12 @@ class Perceptron:
         for x, y in zip(xs, ys):
             prediction = self.predict_instance(x)
             error = y - prediction
-            self.bias += self.learning_rate * error
+            self.bias += error
             self.weights = [
-                w + self.learning_rate * error * xi for w, xi in zip(self.weights, x)
+                w + error * xi for w, xi in zip(self.weights, x)
             ]
 
-    def fit(self, xs: list[list[float]], ys: list[float], *, epochs: int = 500) -> None:
+    def fit(self, xs: list[list[float]], ys: list[float], *, epochs: int = 0) -> None:
         """
         Fit the Perceptron model to the data, stopping early if weights and bias do not change.
 
@@ -360,13 +357,18 @@ class Perceptron:
         """
         prev_weights = self.weights.copy()
         prev_bias = self.bias
-        for epoch in range(epochs):
+        epoch = 0
+
+        while True:
             self.partial_fit(xs, ys)
             if prev_weights == self.weights and prev_bias == self.bias:
                 print(f"Convergence reached after {epoch} epochs.")
-                break  # Stop training if no changes
+                break  # No change in weights and bias, so stop
             prev_weights = self.weights.copy()
             prev_bias = self.bias
+            epoch += 1
+            if epochs != 0 and epoch >= epochs:
+                break  # Stop if the maximum number of epochs is reached
 
     def __repr__(self) -> str:
         return f"Perceptron(dim={self.dim}, bias={self.bias}, weights={self.weights})"
@@ -374,11 +376,11 @@ class Perceptron:
 
 class LinearRegression:
     def __init__(
-        self,
-        dim: int,
-        bias: float = 0,
-        weights: list[list[float]] = None,
-        learning_rate: float = 0.01,
+            self,
+            dim: int,
+            bias: float = 0,
+            weights: list[list[float]] = None,
+            learning_rate: float = 0.01,
     ):
         """
         Initialize the Linear Regression model with the specified number of dimensions,
@@ -396,7 +398,7 @@ class LinearRegression:
             self.weights = [0.0] * dim
         else:
             assert (
-                len(weights) == dim
+                    len(weights) == dim
             ), "Length of weights should match the dimensionality"
             self.weights = weights
 
@@ -453,23 +455,17 @@ class LinearRegression:
             prev_weights = self.weights.copy()
             prev_bias = self.bias
             epoch += 1
-            if epochs != 0 and epoch >= epochs:
-                break  # Stop if the maximum number of epochs is reached
 
     def __repr__(self) -> str:
         return f"LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})"
 
-    def __repr__(self):
-        text = f"LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})"
-        return text
-
 
 class Neuron:
     def __init__(
-        self,
-        dim: int,
-        activation: callable = linear,
-        loss: callable = mean_squared_error,
+            self,
+            dim: int,
+            activation: callable = linear,
+            loss: callable = mean_squared_error,
     ):
         """
         Initialize a Neuron with a specified number of input dimensions, an activation function, and a loss function.
@@ -507,7 +503,8 @@ class Neuron:
         :param alpha: Learning rate (default is 0.01).
         """
         for x, y in zip(xs, ys):
-            prediction = self.bias + sum(w * xi for w, xi in zip(self.weights, x))
+            pre_activation = self.bias + sum(w * xi for w, xi in zip(self.weights, x))
+            prediction = self.activation(pre_activation)
             loss_gradient = derivative(self.loss)(prediction, y)
             activation_gradient = derivative(self.activation)(prediction)
             update_factor = alpha * loss_gradient * activation_gradient
@@ -580,7 +577,7 @@ class Layer:
         """
         self.inputs = inputs
 
-    def __call__(self, xs: list[list[float]]) -> any:
+    def __call__(self, xs: list[list[float]], ) -> any:
         """
         Abstract method to call the layer on a set of inputs.
         """
@@ -627,7 +624,7 @@ class InputLayer(Layer):
     """
 
     def __call__(
-        self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
+            self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
     ) -> any:
         """
         Passes inputs to the next layer. Used for both forward propagation and, if parameters are provided, for backpropagation.
@@ -674,12 +671,12 @@ class InputLayer(Layer):
         return loss_mean
 
     def partial_fit(
-        self,
-        xs: list[list[float]],
-        ys: list[float],
-        *,
-        alpha: float = 0.001,
-        batch_size: int = None,
+            self,
+            xs: list[list[float]],
+            ys: list[float],
+            *,
+            alpha: float = 0.001,
+            batch_size: int = None,
     ) -> float:
         """
         Performs a training step over a batch of data using the provided learning rate.
@@ -711,14 +708,14 @@ class InputLayer(Layer):
         return mean_loss
 
     def fit(
-        self,
-        xs: list[list[float]],
-        ys: list[float],
-        *,
-        epochs: int = 500,
-        alpha: float = 0.001,
-        batch_size: int = None,
-        validation_data: tuple[list[list[float], list[float]]] = None,
+            self,
+            xs: list[list[float]],
+            ys: list[float],
+            *,
+            epochs: int = 500,
+            alpha: float = 0.001,
+            batch_size: int = None,
+            validation_data: tuple[list[list[float], list[float]]] = None,
     ) -> dict[str, list[float]]:
         """
         Train the model over a specified number of epochs, adjusting parameters using gradient descent based on the
@@ -733,7 +730,7 @@ class InputLayer(Layer):
         """
         start_time = time.time()
         history = {"loss": []}
-        evaluate_validation = validation_data is not None
+        evaluate_validation = validation_data
         if evaluate_validation:
             history["val_loss"] = []
             val_xs, val_ys = validation_data
@@ -807,7 +804,7 @@ class DenseLayer(Layer):
             raise ValueError("Weights already initialized.")
 
     def __call__(
-        self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
+            self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
     ) -> any:
         """
         Perform a forward pass through the dense layer and optionally a backward pass if training parameters are provided.
@@ -818,7 +815,7 @@ class DenseLayer(Layer):
         :return: Activated outputs or results from training if applicable.
         """
         activated_outputs = []
-        # forward propagation
+        # Forward propagation
         for x in xs:
             instance_output = [
                 self.bias[o] + sum(wi * xi for wi, xi in zip(self.weights[o], x))
@@ -826,38 +823,46 @@ class DenseLayer(Layer):
             ]  # Output value for one instance x
             activated_outputs.append(instance_output)
 
-        # check if training or not
+        # Check if training or not
         yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
         if ys is not None and alpha is not None:
             gradient_x_list = []
 
-            # backwards propogation updating  biases and weights
+            # Batch updates
+            delta_weights = [[0.0 for _ in range(self.inputs)] for _ in range(self.outputs)]
+            delta_biases = [0.0 for _ in range(self.outputs)]
+
+            # Compute batch updates
             for x, gradient_x in zip(xs, gradients):
-                instance_gradient = [
+                gradient_x_list.append([
                     sum(self.weights[o][i] * gradient_x[o] for o in range(self.outputs))
                     for i in range(self.inputs)
-                ]
-                gradient_x_list.append(instance_gradient)
-
+                ])
                 for o in range(self.outputs):
-                    self.bias[o] -= alpha * gradient_x[o] / len(xs)
+                    delta_biases[o] += alpha * gradient_x[o] / len(xs)
                     for i in range(self.inputs):
-                        self.weights[o][i] -= alpha * gradient_x[o] * x[i] / len(xs)
+                        delta_weights[o][i] += alpha * gradient_x[o] * x[i] / len(xs)
+
+            # Apply updates
+            for o in range(self.outputs):
+                self.bias[o] -= delta_biases[o]
+                for i in range(self.inputs):
+                    self.weights[o][i] -= delta_weights[o][i]
 
             return yhats, loss, gradient_x_list
         else:
-            # not training, return the forward pass results
+            # Not training, return the forward pass results
             return yhats, loss, None
 
 
 class ActivationLayer(Layer):
     def __init__(
-        self,
-        outputs: int,
-        *,
-        name: str = None,
-        next: "Layer" = None,
-        activation: callable = linear,
+            self,
+            outputs: int,
+            *,
+            name: str = None,
+            next: "Layer" = None,
+            activation: callable = linear,
     ):
         """
         Initializes an Activation Layer with a specific activation function applied to each neuron's output.
@@ -872,7 +877,7 @@ class ActivationLayer(Layer):
         self.activation_derivative = derivative(self.activation)
 
     def __call__(
-        self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
+            self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
     ) -> any:
         """
         Processes inputs through the activation function and passes them to the next layer.
@@ -930,10 +935,10 @@ class LossLayer(Layer):
         )
 
     def __call__(
-        self,
-        predictions: list[list[float]],
-        ys: list[float] = None,
-        alpha: float = None,
+            self,
+            predictions: list[list[float]],
+            ys: list[float] = None,
+            alpha: float = None,
     ) -> any:
         """
         Calculates loss between predictions and actual targets, handling backpropagation if training details are provided.
@@ -986,7 +991,7 @@ class SoftmaxLayer(Layer):
         super().__init__(outputs, name=name, next=next)
 
     def __call__(
-        self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
+            self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
     ) -> any:
         """
         Processes inputs through the softmax function and passes the resulting probabilities to the next layer.
