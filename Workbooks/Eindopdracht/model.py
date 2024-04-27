@@ -461,18 +461,12 @@ class LinearRegression:
 
 
 class Neuron:
-    def __init__(
-            self,
-            dim: int,
-            activation: callable = linear,
-            loss: callable = mean_squared_error,
-    ):
+    def __init__(self, dim: int, activation: callable = linear, loss: callable = mean_squared_error):
         """
         Initialize a Neuron with a specified number of input dimensions, an activation function, and a loss function.
-
         :param dim: Number of input features or dimensionality.
         :param activation: Activation function to use (default is linear).
-        :param loss: Loss function to use (default is mean squared error).
+        :param loss: Loss function to use (default is mean_squared_error).
         """
         self.dim = dim
         self.bias = 0.0
@@ -483,30 +477,29 @@ class Neuron:
     def predict(self, xs: list[list[float]]) -> list[float]:
         """
         Predict the output for a batch of input instances.
-
         :param xs: A list of input vectors, each vector being a list of floats.
         :return: A list of outputs after applying the neuron's calculation and activation.
         """
         return [
-            self.activation(
-                self.bias + sum(w * x for w, x in zip(self.weights, instance))
-            )
+            self.activation(self.bias + sum(w * x for w, x in zip(self.weights, instance)))
             for instance in xs
         ]
 
     def partial_fit(self, xs: list[list[float]], ys: list[float], alpha: float = 0.01):
         """
         Perform a partial fit on the dataset for one epoch, updating weights and bias based on the gradient.
-
         :param xs: A list of input vectors.
         :param ys: A list of target values corresponding to each input vector.
         :param alpha: Learning rate (default is 0.01).
         """
+        loss_derivative = derivative(self.loss)
+        activation_derivative = derivative(self.activation)
+
         for x, y in zip(xs, ys):
             pre_activation = self.bias + sum(w * xi for w, xi in zip(self.weights, x))
             prediction = self.activation(pre_activation)
-            loss_gradient = derivative(self.loss)(prediction, y)
-            activation_gradient = derivative(self.activation)(prediction)
+            loss_gradient = loss_derivative(prediction, y)
+            activation_gradient = activation_derivative(pre_activation)
             update_factor = alpha * loss_gradient * activation_gradient
 
             self.bias -= update_factor
@@ -515,7 +508,6 @@ class Neuron:
     def fit(self, xs, ys, epochs: int = 500, alpha: float = 0.001):
         """
         Fit the neuron to the data over a specified number of epochs.
-
         :param xs: A list of input vectors.
         :param ys: A list of target values.
         :param epochs: Total number of epochs to train (default is 500).
@@ -814,36 +806,34 @@ class DenseLayer(Layer):
         :param alpha: Optional learning rate for backpropagation.
         :return: Activated outputs or results from training if applicable.
         """
-        activated_outputs = []
-        # Forward propagation
-        for x in xs:
-            instance_output = [
-                self.bias[o] + sum(wi * xi for wi, xi in zip(self.weights[o], x))
-                for o in range(self.outputs)
-            ]  # Output value for one instance x
-            activated_outputs.append(instance_output)
+        # Forward propagation using list comprehension for calculating instance outputs
+        activated_outputs = [
+            [self.bias[o] + sum(wi * xi for wi, xi in zip(self.weights[o], x))
+             for o in range(self.outputs)]
+            for x in xs
+        ]
 
         # Check if training or not
         yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
         if ys is not None and alpha is not None:
-            gradient_x_list = []
+            # Compute batch updates using list comprehensions
+            gradient_x_list = [
+                [sum(self.weights[o][i] * gradient_x[o] for o in range(self.outputs))
+                 for i in range(self.inputs)]
+                for gradient_x in gradients
+            ]
 
-            # Batch updates
             delta_weights = [[0.0 for _ in range(self.inputs)] for _ in range(self.outputs)]
             delta_biases = [0.0 for _ in range(self.outputs)]
 
-            # Compute batch updates
+            # Gathering updates values
             for x, gradient_x in zip(xs, gradients):
-                gradient_x_list.append([
-                    sum(self.weights[o][i] * gradient_x[o] for o in range(self.outputs))
-                    for i in range(self.inputs)
-                ])
                 for o in range(self.outputs):
                     delta_biases[o] += alpha * gradient_x[o] / len(xs)
                     for i in range(self.inputs):
                         delta_weights[o][i] += alpha * gradient_x[o] * x[i] / len(xs)
 
-            # Apply updates
+            # Applying updates
             for o in range(self.outputs):
                 self.bias[o] -= delta_biases[o]
                 for i in range(self.inputs):
