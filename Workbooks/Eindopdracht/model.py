@@ -435,7 +435,7 @@ class LinearRegression:
                 w + self.learning_rate * error * xi for w, xi in zip(self.weights, x)
             ]
 
-    def fit(self, xs: [[float]], ys: [float], *, epochs: int = 500):
+    def fit(self, xs: [[float]], ys: [float]):
         """
         Fit the Linear Regression model to the data, updating weights and bias to minimize the error,
         and including checks for convergence.
@@ -444,17 +444,7 @@ class LinearRegression:
         :param ys: A list of true values for the instances.
         :param epochs: Maximum number of epochs for training or until convergence.
         """
-        prev_weights = self.weights.copy()
-        prev_bias = self.bias
-        epoch = 0
-        while True:
-            self.partial_fit(xs, ys)
-            if prev_weights == self.weights and prev_bias == self.bias:
-                print(f"Convergence reached after {epoch} epochs.")
-                break  # No change in weights and bias, so stop
-            prev_weights = self.weights.copy()
-            prev_bias = self.bias
-            epoch += 1
+        self.partial_fit(xs, ys)
 
     def __repr__(self) -> str:
         return f"LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})"
@@ -513,15 +503,9 @@ class Neuron:
         :param epochs: Total number of epochs to train (default is 500).
         :param alpha: Learning rate (default is 0.001).
         """
-        prev_weights = self.weights.copy()
-        prev_bias = self.bias
         for epoch in range(epochs):
             self.partial_fit(xs, ys, alpha=alpha)
-            if prev_weights == self.weights and prev_bias == self.bias:
-                print(f"Converged after {epoch} epochs.")
-                break
-            prev_weights = self.weights.copy()
-            prev_bias = self.bias
+
 
     def __repr__(self) -> str:
         """
@@ -813,10 +797,10 @@ class DenseLayer(Layer):
             for x in xs
         ]
 
-        # Check if training or not
         yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
+        # Check if training or not
         if ys is not None and alpha is not None:
-            # Compute batch updates using list comprehensions
+            # Compute batch updates
             gradient_x_list = [
                 [sum(self.weights[o][i] * gradient_x[o] for o in range(self.outputs))
                  for i in range(self.inputs)]
