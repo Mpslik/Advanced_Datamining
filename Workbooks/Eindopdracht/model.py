@@ -160,7 +160,7 @@ def binary_crossentropy(y_pred: float, y_true: float, epsilon: float = 0.0001) -
 
 
 def categorical_crossentropy(
-    y_pred: float, y_true: float, epsilon: float = 0.0001
+        y_pred: float, y_true: float, epsilon: float = 0.0001
 ) -> float:
     """
     calculates the categorical cross entropy loss.
@@ -287,11 +287,10 @@ class ProgressBar:
 
 class Perceptron:
     def __init__(
-        self,
-        dim: int,
-        bias: float = 0,
-        weights: [list[float]] = None,
-        learning_rate: float = 0.01,
+            self,
+            dim: int,
+            bias: float = 0,
+            weights: [list[float]] = None,
     ):
         """
         Initialize the Perceptron with a specified dimension, bias, initial weights, and learning rate.
@@ -307,7 +306,7 @@ class Perceptron:
             self.weights = [0.0] * dim
         else:
             assert (
-                len(weights) == dim
+                    len(weights) == dim
             ), "Length of weights should match the dimensionality"
             self.weights = weights
 
@@ -344,7 +343,9 @@ class Perceptron:
             prediction = self.predict_instance(x)
             error = y - prediction
             self.bias += error
-            self.weights = [w + error * xi for w, xi in zip(self.weights, x)]
+            self.weights = [
+                w + error * xi for w, xi in zip(self.weights, x)
+            ]
 
     def fit(self, xs: list[list[float]], ys: list[float], *, epochs: int = 0) -> None:
         """
@@ -375,11 +376,11 @@ class Perceptron:
 
 class LinearRegression:
     def __init__(
-        self,
-        dim: int,
-        bias: float = 0,
-        weights: list[list[float]] = None,
-        learning_rate: float = 0.01,
+            self,
+            dim: int,
+            bias: float = 0,
+            weights: list[list[float]] = None,
+            learning_rate: float = 0.01,
     ):
         """
         Initialize the Linear Regression model with the specified number of dimensions,
@@ -397,7 +398,7 @@ class LinearRegression:
             self.weights = [0.0] * dim
         else:
             assert (
-                len(weights) == dim
+                    len(weights) == dim
             ), "Length of weights should match the dimensionality"
             self.weights = weights
 
@@ -448,18 +449,9 @@ class LinearRegression:
     def __repr__(self) -> str:
         return f"LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})"
 
-    def __repr__(self):
-        text = f"LinearRegression(dim={self.dim}, bias={self.bias}, weights={self.weights})"
-        return text
-
 
 class Neuron:
-    def __init__(
-        self,
-        dim: int,
-        activation: callable = linear,
-        loss: callable = mean_squared_error,
-    ):
+    def __init__(self, dim: int, activation: callable = linear, loss: callable = mean_squared_error):
         """
         Initialize a Neuron with a specified number of input dimensions, an activation function, and a loss function.
         :param dim: Number of input features or dimensionality.
@@ -479,9 +471,7 @@ class Neuron:
         :return: A list of outputs after applying the neuron's calculation and activation.
         """
         return [
-            self.activation(
-                self.bias + sum(w * x for w, x in zip(self.weights, instance))
-            )
+            self.activation(self.bias + sum(w * x for w, x in zip(self.weights, instance)))
             for instance in xs
         ]
 
@@ -515,6 +505,7 @@ class Neuron:
         """
         for epoch in range(epochs):
             self.partial_fit(xs, ys, alpha=alpha)
+
 
     def __repr__(self) -> str:
         """
@@ -562,10 +553,7 @@ class Layer:
         """
         self.inputs = inputs
 
-    def __call__(
-        self,
-        xs: list[list[float]],
-    ) -> any:
+    def __call__(self, xs: list[list[float]], ) -> any:
         """
         Abstract method to call the layer on a set of inputs.
         """
@@ -612,7 +600,7 @@ class InputLayer(Layer):
     """
 
     def __call__(
-        self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
+            self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
     ) -> any:
         """
         Passes inputs to the next layer. Used for both forward propagation and, if parameters are provided, for backpropagation.
@@ -659,12 +647,12 @@ class InputLayer(Layer):
         return loss_mean
 
     def partial_fit(
-        self,
-        xs: list[list[float]],
-        ys: list[float],
-        *,
-        alpha: float = 0.001,
-        batch_size: int = None,
+            self,
+            xs: list[list[float]],
+            ys: list[float],
+            *,
+            alpha: float = 0.001,
+            batch_size: int = None,
     ) -> float:
         """
         Performs a training step over a batch of data using the provided learning rate.
@@ -696,14 +684,14 @@ class InputLayer(Layer):
         return mean_loss
 
     def fit(
-        self,
-        xs: list[list[float]],
-        ys: list[float],
-        *,
-        epochs: int = 500,
-        alpha: float = 0.001,
-        batch_size: int = None,
-        validation_data: tuple[list[list[float], list[float]]] = None,
+            self,
+            xs: list[list[float]],
+            ys: list[float],
+            *,
+            epochs: int = 500,
+            alpha: float = 0.001,
+            batch_size: int = None,
+            validation_data: tuple[list[list[float], list[float]]] = None,
     ) -> dict[str, list[float]]:
         """
         Train the model over a specified number of epochs, adjusting parameters using gradient descent based on the
@@ -718,7 +706,7 @@ class InputLayer(Layer):
         """
         start_time = time.time()
         history = {"loss": []}
-        evaluate_validation = validation_data is not None
+        evaluate_validation = validation_data
         if evaluate_validation:
             history["val_loss"] = []
             val_xs, val_ys = validation_data
@@ -792,7 +780,7 @@ class DenseLayer(Layer):
             raise ValueError("Weights already initialized.")
 
     def __call__(
-        self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
+            self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
     ) -> any:
         """
         Perform a forward pass through the dense layer and optionally a backward pass if training parameters are provided.
@@ -802,32 +790,32 @@ class DenseLayer(Layer):
         :param alpha: Optional learning rate for backpropagation.
         :return: Activated outputs or results from training if applicable.
         """
-        activated_outputs = []
-        # forward propagation
-        for x in xs:
-            instance_output = [
-                self.bias[o] + sum(wi * xi for wi, xi in zip(self.weights[o], x))
-                for o in range(self.outputs)
-            ]  # Output value for one instance x
-            activated_outputs.append(instance_output)
+        # Forward propagation using list comprehension for calculating instance outputs
+        activated_outputs = [
+            [self.bias[o] + sum(wi * xi for wi, xi in zip(self.weights[o], x))
+             for o in range(self.outputs)]
+            for x in xs
+        ]
 
         yhats, loss, gradients = self.next(activated_outputs, ys, alpha=alpha)
         # Check if training or not
         if ys is not None and alpha is not None:
-            gradient_x_list = []
-
-            delta_weights = [
-                [0.0 for _ in range(self.inputs)] for _ in range(self.outputs)
+            # Compute batch updates
+            gradient_x_list = [
+                [sum(self.weights[o][i] * gradient_x[o] for o in range(self.outputs))
+                 for i in range(self.inputs)]
+                for gradient_x in gradients
             ]
+
+            delta_weights = [[0.0 for _ in range(self.inputs)] for _ in range(self.outputs)]
             delta_biases = [0.0 for _ in range(self.outputs)]
 
             # Gathering updates values
             for x, gradient_x in zip(xs, gradients):
-                instance_gradient = [
-                    sum(self.weights[o][i] * gradient_x[o] for o in range(self.outputs))
-                    for i in range(self.inputs)
-                ]
-                gradient_x_list.append(instance_gradient)
+                for o in range(self.outputs):
+                    delta_biases[o] += alpha * gradient_x[o] / len(xs)
+                    for i in range(self.inputs):
+                        delta_weights[o][i] += alpha * gradient_x[o] * x[i] / len(xs)
 
             # Applying updates
             for o in range(self.outputs):
@@ -843,12 +831,12 @@ class DenseLayer(Layer):
 
 class ActivationLayer(Layer):
     def __init__(
-        self,
-        outputs: int,
-        *,
-        name: str = None,
-        next: "Layer" = None,
-        activation: callable = linear,
+            self,
+            outputs: int,
+            *,
+            name: str = None,
+            next: "Layer" = None,
+            activation: callable = linear,
     ):
         """
         Initializes an Activation Layer with a specific activation function applied to each neuron's output.
@@ -863,7 +851,7 @@ class ActivationLayer(Layer):
         self.activation_derivative = derivative(self.activation)
 
     def __call__(
-        self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
+            self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
     ) -> any:
         """
         Processes inputs through the activation function and passes them to the next layer.
@@ -911,6 +899,7 @@ class LossLayer(Layer):
         """
         super().__init__(outputs=None, name=name)
         self.loss_func = loss
+        self.loss_derivative = derivative(self.loss_func)
 
     def add(self, next: "Layer"):
         """Override to prevent adding layers after a loss layer."""
@@ -920,10 +909,10 @@ class LossLayer(Layer):
         )
 
     def __call__(
-        self,
-        predictions: list[list[float]],
-        ys: list[float] = None,
-        alpha: float = None,
+            self,
+            predictions: list[list[float]],
+            ys: list[float] = None,
+            alpha: float = None,
     ) -> any:
         """
         Calculates loss between predictions and actual targets, handling backpropagation if training details are provided.
@@ -947,10 +936,7 @@ class LossLayer(Layer):
             # calculate gradients for training
             if alpha:
                 gradient_vector_list = [
-                    [
-                        derivative(self.loss_func)(yhat_i, y_i)
-                        for yhat_i, y_i in zip(yhat, y)
-                    ]
+                    [self.loss_derivative(yhat_i, y_i) for yhat_i, y_i in zip(yhat, y)]
                     for yhat, y in zip(yhats, ys)
                 ]
 
@@ -979,7 +965,7 @@ class SoftmaxLayer(Layer):
         super().__init__(outputs, name=name, next=next)
 
     def __call__(
-        self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
+            self, xs: list[list[float]], ys: list[float] = None, alpha: float = None
     ) -> any:
         """
         Processes inputs through the softmax function and passes the resulting probabilities to the next layer.
@@ -1000,6 +986,20 @@ class SoftmaxLayer(Layer):
         predictions, losses, gradients_from_loss = self.next(yhats, ys, alpha)
 
         if alpha and gradients_from_loss is not None:
+            gradients_to_h = [
+                [
+                    sum(
+                        gradients_from_loss[o]
+                        * prediction[o]
+                        * ((i == o) - prediction[i])
+                        for o in range(self.outputs)
+                    )
+                    for i in range(self.inputs)
+                ]
+                for prediction, gradients_from_loss in zip(
+                    predictions, gradients_from_loss
+                )
+            ]
             gradients_to_h = [
                 [
                     sum(
